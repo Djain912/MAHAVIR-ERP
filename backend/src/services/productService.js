@@ -23,8 +23,8 @@ export const getAllProducts = async (activeOnly = false, page = 1, limit = 100) 
   
   const [products, total] = await Promise.all([
     Product.find(query)
-      .select('name size pricePerUnit active createdAt')
-      .sort({ name: 1, size: 1 })
+      // Return all fields for product selection
+      .sort({ brandFullName: 1, name: 1, size: 1 })
       .skip(skip)
       .limit(limit)
       .lean(),
@@ -48,7 +48,7 @@ export const getAllProducts = async (activeOnly = false, page = 1, limit = 100) 
  */
 export const getProductById = async (productId) => {
   const product = await Product.findById(productId)
-    .select('name size pricePerUnit active createdAt')
+    // Return all fields
     .lean();
   
   if (!product) {

@@ -3,9 +3,9 @@
  * Create and manage driver dispatches with stock and cash assignments
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
-import { FaPlus, FaTruck, FaEye, FaCheck, FaTimes, FaTrash } from 'react-icons/fa';
+import { FaPlus, FaTruck, FaEye, FaCheck, FaTimes, FaTrash, FaSearch } from 'react-icons/fa';
 import Card from '../components/Card';
 import {
   createDriverDispatch,
@@ -41,16 +41,7 @@ const DriverDispatch = () => {
   const [formData, setFormData] = useState({
     driverId: '',
     date: new Date().toISOString().split('T')[0],
-    items: [],
-    cashDenominations: [
-      { noteValue: 2000, noteCount: 0 },
-      { noteValue: 500, noteCount: 0 },
-      { noteValue: 200, noteCount: 0 },
-      { noteValue: 100, noteCount: 0 },
-      { noteValue: 50, noteCount: 0 },
-      { noteValue: 20, noteCount: 0 },
-      { noteValue: 10, noteCount: 0 }
-    ]
+    items: []
   });
 
   // Product selection state
@@ -58,10 +49,27 @@ const DriverDispatch = () => {
   const [selectedQuantity, setSelectedQuantity] = useState('');
   const [selectedRate, setSelectedRate] = useState('');
   const [selectedItemType, setSelectedItemType] = useState('Retail'); // NEW: Item type for each product
+  const [productSearchTerm, setProductSearchTerm] = useState('');
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const productDropdownRef = useRef(null);
 
   useEffect(() => {
     fetchData();
   }, [filterStatus, filterDriver]);
+
+  // Handle clicks outside product dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (productDropdownRef.current && !productDropdownRef.current.contains(event.target)) {
+        setShowProductDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   const fetchData = async () => {
     try {
@@ -75,7 +83,8 @@ const DriverDispatch = () => {
       const [dispatchesData, driversData, productsData, stockData] = await Promise.all([
         getAllDispatches(filters),
         getAllDrivers({ role: 'Driver', active: true }),
-        getAllProducts(true),
+        // Request all products (not only active) so the dropdown shows everything like StockIntake
+        getAllProducts(false),
         getStockSummary()
       ]);
 
@@ -88,9 +97,11 @@ const DriverDispatch = () => {
       const productsArray = Array.isArray(productsData) ? productsData : (Array.isArray(productsData?.data) ? productsData.data : []);
       const stockArray = Array.isArray(stockData) ? stockData : (Array.isArray(stockData?.data) ? stockData.data : []);
 
-      setDispatches(dispatchesArray);
-      setDrivers(driversArray);
-      setProducts(productsArray);
+  setDispatches(dispatchesArray);
+  setDrivers(driversArray);
+  console.log('📦 Products fetched for DriverDispatch:', productsArray);
+  console.log('📦 Products count:', productsArray.length);
+  setProducts(productsArray);
       setStockSummary(stockArray);
 
       // Calculate stats
@@ -138,12 +149,7 @@ const DriverDispatch = () => {
       return;
     }
 
-    // Check if product already added
-    const existingIndex = formData.items.findIndex(item => item.productId === selectedProduct);
-    if (existingIndex >= 0) {
-      toast.error('Product already added. Remove it first to change quantity.');
-      return;
-    }
+    // Allow same product to be added multiple times (no duplicate check)
 
     const newItem = {
       productId: selectedProduct,
@@ -171,17 +177,23 @@ const DriverDispatch = () => {
     setFormData({ ...formData, items: updatedItems });
   };
 
-  const handleCashChange = (index, count) => {
-    const updatedCash = [...formData.cashDenominations];
-    updatedCash[index].noteCount = parseInt(count) || 0;
-    setFormData({ ...formData, cashDenominations: updatedCash });
-  };
-
-  const calculateTotalCash = () => {
-    return formData.cashDenominations.reduce(
-      (sum, denom) => sum + (denom.noteValue * denom.noteCount),
-      0
+  // Filter products based on search term
+  const filteredProducts = products.filter(product => {
+    if (!productSearchTerm) return true;
+    const searchLower = productSearchTerm.toLowerCase();
+    return (
+      product.brandFullName?.toLowerCase().includes(searchLower) ||
+      product.name?.toLowerCase().includes(searchLower) ||
+      product.brand?.toLowerCase().includes(searchLower) ||
+      product.type?.toLowerCase().includes(searchLower)
     );
+  });
+
+  const handleProductSelect = (product) => {
+    setSelectedProduct(product._id);
+    setProductSearchTerm(product.brandFullName || product.name);
+    setSelectedRate(product.purchaseRate || product.price || '');
+    setShowProductDropdown(false);
   };
 
   const calculateTotalStock = () => {
@@ -213,7 +225,7 @@ const DriverDispatch = () => {
           quantity: item.quantity,
           ratePerUnit: item.ratePerUnit
         })),
-        cashDenominations: formData.cashDenominations.filter(d => d.noteCount > 0)
+        cashDenominations: [] // No cash denominations
       };
 
       await createDriverDispatch(dispatchData);
@@ -235,21 +247,14 @@ const DriverDispatch = () => {
     setFormData({
       driverId: '',
       date: new Date().toISOString().split('T')[0],
-      items: [],
-      cashDenominations: [
-        { noteValue: 2000, noteCount: 0 },
-        { noteValue: 500, noteCount: 0 },
-        { noteValue: 200, noteCount: 0 },
-        { noteValue: 100, noteCount: 0 },
-        { noteValue: 50, noteCount: 0 },
-        { noteValue: 20, noteCount: 0 },
-        { noteValue: 10, noteCount: 0 }
-      ]
+      items: []
     });
     setSelectedProduct('');
     setSelectedQuantity('');
     setSelectedRate('');
     setSelectedItemType('Retail'); // Reset item type
+    setProductSearchTerm('');
+    setShowProductDropdown(false);
   };
 
   const handleViewDetails = async (dispatch) => {
@@ -456,7 +461,7 @@ const DriverDispatch = () => {
       {/* Create Dispatch Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+    <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-visible">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-2xl font-bold text-gray-900">Create New Dispatch</h2>
@@ -511,29 +516,65 @@ const DriverDispatch = () => {
                 <div className="mb-6">
                   <h3 className="text-lg font-semibold mb-3">Add Products</h3>
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-3">
-                    <div className="md:col-span-2">
+                    <div className="md:col-span-2 relative" ref={productDropdownRef}>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Product</label>
-                      <select
-                        value={selectedProduct}
-                        onChange={(e) => {
-                          setSelectedProduct(e.target.value);
-                          const product = products.find(p => p._id === e.target.value);
-                          if (product) {
-                            setSelectedRate(product.price);
-                          }
-                        }}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500"
-                      >
-                        <option value="">Select Product</option>
-                        {products.map(product => {
-                          const stock = stockSummary.find(s => s.productId === product._id);
-                          return (
-                            <option key={product._id} value={product._id}>
-                              {product.name} - {product.size} (Stock: {stock?.totalQuantity || 0})
-                            </option>
-                          );
-                        })}
-                      </select>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={productSearchTerm}
+                          onChange={(e) => {
+                            setProductSearchTerm(e.target.value);
+                            setShowProductDropdown(true);
+                            setSelectedProduct('');
+                          }}
+                          onFocus={() => setShowProductDropdown(true)}
+                          placeholder="Search by brand, name, or type..."
+                          className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-10 focus:ring-2 focus:ring-red-500"
+                        />
+                        {selectedProduct ? (
+                          <div className="absolute right-3 top-2.5 text-green-600 text-xl">
+                            ✓
+                          </div>
+                        ) : (
+                          <FaSearch className="absolute right-3 top-3 text-gray-400" />
+                        )}
+                      </div>
+                      
+                      {/* Dropdown */}
+                      {showProductDropdown && filteredProducts.length > 0 && (
+                        <div className="absolute z-60 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {filteredProducts.map(product => {
+                            const stock = stockSummary.find(s => s.productId === product._id);
+                            return (
+                              <div
+                                key={product._id}
+                                onClick={() => handleProductSelect(product)}
+                                className="px-4 py-3 hover:bg-red-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                              >
+                                <div className="font-medium text-gray-900">
+                                  {product.brandFullName || `${product.name} - ${product.size}`}
+                                </div>
+                                <div className="text-sm text-gray-600 mt-1 flex justify-between">
+                                  <span>
+                                    {product.brand && <span>{product.brand}</span>}
+                                    {product.type && <span> • {product.type}</span>}
+                                    {product.ml && <span> • {product.ml}ml</span>}
+                                    {product.size && <span> • {product.size}</span>}
+                                  </span>
+                                  {product.purchaseRate && (
+                                    <span className="font-semibold text-green-600">
+                                      ₹{product.purchaseRate}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Stock: {stock?.totalQuantity || 0}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
 
                     <div>
@@ -627,42 +668,13 @@ const DriverDispatch = () => {
                   )}
                 </div>
 
-                {/* Cash Denominations */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-3">Cash Denominations</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {formData.cashDenominations.map((denom, index) => (
-                      <div key={denom.noteValue} className="border border-gray-200 rounded-lg p-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          ₹{denom.noteValue} Notes
-                        </label>
-                        <input
-                          type="number"
-                          value={denom.noteCount}
-                          onChange={(e) => handleCashChange(index, e.target.value)}
-                          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-red-500"
-                          min="0"
-                          placeholder="0"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Total: ₹{(denom.noteValue * denom.noteCount).toFixed(2)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Summary */}
                 <div className="bg-gray-50 rounded-lg p-4 mb-6">
                   <h3 className="text-lg font-semibold mb-3">Dispatch Summary</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4">
                     <div>
                       <p className="text-sm text-gray-600">Total Stock Value:</p>
                       <p className="text-xl font-bold text-gray-900">₹{calculateTotalStock().toFixed(2)}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">Total Cash Value:</p>
-                      <p className="text-xl font-bold text-gray-900">₹{calculateTotalCash().toFixed(2)}</p>
                     </div>
                   </div>
                 </div>

@@ -3,7 +3,7 @@
  * Manage warehouse stock intake with product selection, batch tracking, and inventory monitoring
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -31,6 +31,10 @@ const StockIntake = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showProductDropdown, setShowProductDropdown] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const dropdownRef = useRef(null);
 
   // Load initial data
   useEffect(() => {
@@ -39,11 +43,26 @@ const StockIntake = () => {
     loadStockSummary();
   }, []);
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowProductDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const loadProducts = async () => {
     try {
-      const data = await productService.getAllProducts();
+      // Pass false to get ALL products (not just active ones)
+      const data = await productService.getAllProducts(false);
+      console.log('📦 Loaded products:', data);
       setProducts(Array.isArray(data) ? data : []);
     } catch (error) {
+      console.error('❌ Failed to load products:', error);
       toast.error('Failed to load products');
       setProducts([]);
     }
@@ -83,6 +102,53 @@ const StockIntake = () => {
       }));
     }
   };
+
+  const handleProductSelect = (product) => {
+    setSelectedProduct(product);
+    setSearchTerm(product.brandFullName || `${product.name} - ${product.size}`);
+    setFormData(prev => ({
+      ...prev,
+      product: product._id,
+      purchaseRate: product.purchaseRate || product.pricePerUnit || ''
+    }));
+    setShowProductDropdown(false);
+    
+    // Clear product error
+    if (errors.product) {
+      setErrors(prev => ({ ...prev, product: '' }));
+    }
+  };
+
+  const handleSearchChange = (e) => {
+    const value = e.target.value;
+    setSearchTerm(value);
+    setShowProductDropdown(true);
+    
+    // Clear selection if user types
+    if (selectedProduct) {
+      setSelectedProduct(null);
+      setFormData(prev => ({
+        ...prev,
+        product: '',
+        purchaseRate: ''
+      }));
+    }
+  };
+
+  const filteredProducts = products.filter(product => {
+    const searchLower = searchTerm.toLowerCase();
+    const fullName = product.brandFullName || `${product.name} - ${product.size}`;
+    const brand = product.brand || product.name || '';
+    const type = product.type || '';
+    const ml = product.ml || product.size || '';
+    
+    return (
+      fullName.toLowerCase().includes(searchLower) ||
+      brand.toLowerCase().includes(searchLower) ||
+      type.toLowerCase().includes(searchLower) ||
+      ml.toLowerCase().includes(searchLower)
+    );
+  });
 
   const validateForm = () => {
     const newErrors = {};
@@ -133,6 +199,8 @@ const StockIntake = () => {
         purchaseRate: '',
         sellingRate: ''
       });
+      setSearchTerm('');
+      setSelectedProduct(null);
       setShowForm(false);
       
       // Reload data
@@ -212,20 +280,62 @@ const StockIntake = () => {
         <Card title="Add New Stock">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Select
-                label="Product *"
-                name="product"
-                value={formData.product}
-                onChange={handleInputChange}
-                error={errors.product}
-                options={[
-                  { value: '', label: 'Select Product' },
-                  ...products.map(p => ({
-                    value: p._id,
-                    label: `${p.name} - ${p.size}`
-                  }))
-                ]}
-              />
+              {/* Searchable Product Dropdown */}
+              <div className="relative" ref={dropdownRef}>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Product *
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    onFocus={() => setShowProductDropdown(true)}
+                    placeholder="Search products..."
+                    className={`w-full px-4 py-2 border ${
+                      errors.product ? 'border-red-500' : 'border-gray-300'
+                    } rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent`}
+                  />
+                  {selectedProduct && (
+                    <div className="absolute right-3 top-2.5 text-green-600">
+                      ✓
+                    </div>
+                  )}
+                </div>
+                {errors.product && (
+                  <p className="mt-1 text-sm text-red-600">{errors.product}</p>
+                )}
+                
+                {/* Dropdown List */}
+                {showProductDropdown && filteredProducts.length > 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                    {filteredProducts.map((product) => (
+                      <div
+                        key={product._id}
+                        onClick={() => handleProductSelect(product)}
+                        className="px-4 py-3 hover:bg-primary-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                      >
+                        <div className="font-medium text-gray-900">
+                          {product.brandFullName || `${product.name} - ${product.size}`}
+                        </div>
+                        <div className="text-sm text-gray-600 mt-1 flex justify-between">
+                          <span>{product.brand} • {product.type} • {product.ml || product.size}</span>
+                          <span className="font-semibold text-green-600">
+                            ₹{product.purchaseRate || product.pricePerUnit}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
+                {/* No results */}
+                {showProductDropdown && searchTerm && filteredProducts.length === 0 && (
+                  <div className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-4 text-center text-gray-500">
+                    No products found
+                  </div>
+                )}
+              </div>
 
               <Input
                 label="Quantity *"

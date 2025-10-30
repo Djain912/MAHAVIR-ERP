@@ -30,19 +30,7 @@ export const createDriverDispatch = async (dispatchData) => {
       throw new Error('Cannot dispatch to inactive driver');
     }
     
-    // Check if driver already has an active dispatch for today
-    const existingDispatch = await DriverDispatch.findOne({
-      driverId,
-      date: {
-        $gte: new Date(date).setHours(0, 0, 0, 0),
-        $lt: new Date(date).setHours(23, 59, 59, 999)
-      },
-      status: 'Active'
-    });
-    
-    if (existingDispatch) {
-      throw new Error('Driver already has an active dispatch for this date');
-    }
+    // Allow multiple dispatches per driver per day: no uniqueness check for active dispatch
     
     let totalStockValue = 0;
     const dispatchItems = [];

@@ -114,7 +114,7 @@ export const driverDispatchValidation = {
         noteValue: Joi.number().valid(1, 2, 5, 10, 20, 50, 100, 200, 500, 2000).required(),
         noteCount: Joi.number().integer().min(0).required()
       })
-    ).min(1).required()
+    ).optional().default([]) // Allow empty array or omit entirely
   })
 };
 

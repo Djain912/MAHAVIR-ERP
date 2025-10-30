@@ -20,9 +20,6 @@ const DENOMINATIONS = [
   { value: 50, label: '₹50' },
   { value: 20, label: '₹20' },
   { value: 10, label: '₹10' },
-  { value: 5, label: '₹5' },
-  { value: 2, label: '₹2' },
-  { value: 1, label: '₹1' },
 ];
 
 export default function CashCollectionScreen({ route, navigation }) {
@@ -41,6 +38,14 @@ export default function CashCollectionScreen({ route, navigation }) {
   const [totalOnlineReceived, setTotalOnlineReceived] = useState(0);
   const [totalCreditGiven, setTotalCreditGiven] = useState(0);
   
+  // NEW FIELDS
+  const [creditReceivedCash, setCreditReceivedCash] = useState('');
+  const [creditReceivedCheque, setCreditReceivedCheque] = useState('');
+  const [bounceReceivedCash, setBounceReceivedCash] = useState('');
+  const [bounceReceivedCheque, setBounceReceivedCheque] = useState('');
+  const [emptyBottlesReceived, setEmptyBottlesReceived] = useState('');
+  const [coins, setCoins] = useState(''); // Single field for all coins (₹1, ₹2, ₹5)
+  
   const [expectedCash, setExpectedCash] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -51,15 +56,15 @@ export default function CashCollectionScreen({ route, navigation }) {
 
   useEffect(() => {
     loadUser();
-    // Set expected cash from dispatch
-    if (dispatch?.totalCashValue) {
-      setExpectedCash(dispatch.totalCashValue.toString());
+    // Set expected cash from dispatch stock value (value of products dispatched)
+    if (dispatch?.totalStockValue) {
+      setExpectedCash(dispatch.totalStockValue.toString());
     }
   }, []);
 
   useEffect(() => {
     calculateTotals();
-  }, [denominations, totalChequeReceived, totalOnlineReceived, totalCreditGiven, expectedCash]);
+  }, [denominations, coins, totalChequeReceived, totalOnlineReceived, totalCreditGiven, expectedCash]);
 
   const loadUser = async () => {
     const userData = await getStoredUser();
@@ -67,8 +72,8 @@ export default function CashCollectionScreen({ route, navigation }) {
   };
 
   const calculateTotals = () => {
-    // Calculate total cash from denominations
-    const cashTotal = denominations.reduce((sum, d) => sum + d.totalValue, 0);
+    // Calculate total cash from denominations + coins
+    const cashTotal = denominations.reduce((sum, d) => sum + d.totalValue, 0) + parseFloat(coins || 0);
     setTotalCashFromDenominations(cashTotal);
 
     // Calculate total received (cash + cheque + online)
@@ -106,12 +111,18 @@ export default function CashCollectionScreen({ route, navigation }) {
     }
 
     // Confirmation alert with summary
+    const creditRecTotal = parseFloat(creditReceivedCash || 0) + parseFloat(creditReceivedCheque || 0);
+    const bounceRecTotal = parseFloat(bounceReceivedCash || 0) + parseFloat(bounceReceivedCheque || 0);
+    
     Alert.alert(
       'Confirm Submission',
       `Cash from Denominations: ₹${totalCashFromDenominations.toLocaleString()}\n` +
       `Cheque Received: ₹${totalChequeReceived.toLocaleString()}\n` +
       `Online Received: ₹${totalOnlineReceived.toLocaleString()}\n` +
       `Credit Given: ₹${totalCreditGiven.toLocaleString()}\n\n` +
+      `Credit Received: ₹${creditRecTotal.toLocaleString()}\n` +
+      `Bounce Received: ₹${bounceRecTotal.toLocaleString()}\n` +
+      `Empty Bottles: ${emptyBottlesReceived || 0} bottles\n\n` +
       `Total Received: ₹${totalReceived.toLocaleString()}\n` +
       `Expected: ₹${parseFloat(expectedCash).toLocaleString()}\n` +
       `Variance: ₹${variance.toLocaleString()}\n\n` +
@@ -145,10 +156,17 @@ export default function CashCollectionScreen({ route, navigation }) {
           noteCount: d.noteCount,
           totalValue: d.totalValue
         })),
+        coins: parseFloat(coins || 0), // Single field for all coins
         totalCashCollected: totalCashFromDenominations,
         totalChequeReceived: parseFloat(totalChequeReceived || 0),
         totalOnlineReceived: parseFloat(totalOnlineReceived || 0),
         totalCreditGiven: parseFloat(totalCreditGiven || autoCredit),
+        // NEW FIELDS
+        creditReceivedCash: parseFloat(creditReceivedCash || 0),
+        creditReceivedCheque: parseFloat(creditReceivedCheque || 0),
+        bounceReceivedCash: parseFloat(bounceReceivedCash || 0),
+        bounceReceivedCheque: parseFloat(bounceReceivedCheque || 0),
+        emptyBottlesReceived: parseInt(emptyBottlesReceived || 0),
         expectedCash: parseFloat(expectedCash),
         notes: notes.trim(),
       };
@@ -194,6 +212,10 @@ export default function CashCollectionScreen({ route, navigation }) {
           <Text style={styles.infoValue}>{new Date(dispatch.date).toLocaleDateString()}</Text>
         </View>
         <View style={styles.infoRow}>
+          <Text style={styles.infoLabel}>Stock Value (Expected):</Text>
+          <Text style={[styles.infoValue, styles.highlightValue]}>₹{dispatch.totalStockValue?.toLocaleString() || '0'}</Text>
+        </View>
+        <View style={styles.infoRow}>
           <Text style={styles.infoLabel}>Cash Given:</Text>
           <Text style={styles.infoValue}>₹{dispatch.totalCashValue?.toLocaleString() || '0'}</Text>
         </View>
@@ -227,6 +249,18 @@ export default function CashCollectionScreen({ route, navigation }) {
             </View>
           );
         })}
+        
+        {/* Coins Input - Single field for ₹1, ₹2, ₹5 */}
+        <View style={styles.coinsSection}>
+          <Text style={styles.coinsLabel}>🪙 Coins (₹1 + ₹2 + ₹5)</Text>
+          <TextInput
+            style={styles.coinsInput}
+            placeholder="Enter total coins amount"
+            keyboardType="numeric"
+            value={coins}
+            onChangeText={setCoins}
+          />
+        </View>
         
         <View style={styles.totalRow}>
           <Text style={styles.totalLabel}>Total Cash:</Text>
@@ -272,18 +306,118 @@ export default function CashCollectionScreen({ route, navigation }) {
         </View>
       </View>
 
+      {/* Credit Received Section */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>💰 Credit Received (Previous Credit Collection)</Text>
+        <Text style={styles.subtitle}>Amount received from previous credit sales</Text>
+        
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Credit Received by Cash</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="₹0"
+            keyboardType="numeric"
+            value={creditReceivedCash}
+            onChangeText={setCreditReceivedCash}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Credit Received by Cheque</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="₹0"
+            keyboardType="numeric"
+            value={creditReceivedCheque}
+            onChangeText={setCreditReceivedCheque}
+          />
+        </View>
+
+        {(parseFloat(creditReceivedCash || 0) + parseFloat(creditReceivedCheque || 0)) > 0 && (
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Total Credit Received:</Text>
+            <Text style={styles.totalValue}>
+              ₹{(parseFloat(creditReceivedCash || 0) + parseFloat(creditReceivedCheque || 0)).toLocaleString()}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Bounce Received Section */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>🔄 Bounce Received (Returned Cheque Amount)</Text>
+        <Text style={styles.subtitle}>Amount received for previously bounced cheques</Text>
+        
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Bounce Received by Cash</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="₹0"
+            keyboardType="numeric"
+            value={bounceReceivedCash}
+            onChangeText={setBounceReceivedCash}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Bounce Received by Cheque</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="₹0"
+            keyboardType="numeric"
+            value={bounceReceivedCheque}
+            onChangeText={setBounceReceivedCheque}
+          />
+        </View>
+
+        {(parseFloat(bounceReceivedCash || 0) + parseFloat(bounceReceivedCheque || 0)) > 0 && (
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Total Bounce Received:</Text>
+            <Text style={styles.totalValue}>
+              ₹{(parseFloat(bounceReceivedCash || 0) + parseFloat(bounceReceivedCheque || 0)).toLocaleString()}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Empty Bottles Section */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>🍾 Empty Bottles Received</Text>
+        <Text style={styles.subtitle}>Number of empty bottles collected from retailers</Text>
+        
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Empty Bottles Count</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="0 bottles"
+            keyboardType="numeric"
+            value={emptyBottlesReceived}
+            onChangeText={setEmptyBottlesReceived}
+          />
+        </View>
+
+        {parseFloat(emptyBottlesReceived || 0) > 0 && (
+          <View style={styles.infoRow}>
+            <Text style={styles.infoLabel}>Total Bottles:</Text>
+            <Text style={[styles.infoValue, { color: '#16A34A', fontSize: 18, fontWeight: 'bold' }]}>
+              {parseFloat(emptyBottlesReceived || 0)} bottles
+            </Text>
+          </View>
+        )}
+      </View>
+
       {/* Expected Cash */}
       <View style={styles.card}>
         <Text style={styles.cardTitle}>📊 Summary</Text>
         
         <View style={styles.inputGroup}>
-          <Text style={styles.inputLabel}>Expected Cash Amount *</Text>
+          <Text style={styles.inputLabel}>Expected Cash Amount (From Dispatch)</Text>
           <TextInput
-            style={styles.input}
-            placeholder="Enter expected amount"
+            style={[styles.input, styles.disabledInput]}
+            placeholder="Auto-filled from dispatch"
             keyboardType="numeric"
             value={expectedCash}
-            onChangeText={setExpectedCash}
+            editable={false}
           />
         </View>
 
@@ -396,6 +530,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#111827',
   },
+  highlightValue: {
+    fontSize: 16,
+    color: '#16A34A',
+    fontWeight: 'bold',
+  },
   denominationRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -435,6 +574,29 @@ const styles = StyleSheet.create({
     minWidth: 80,
     textAlign: 'right',
   },
+  coinsSection: {
+    marginTop: 16,
+    padding: 12,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+  },
+  coinsLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#92400E',
+    marginBottom: 8,
+  },
+  coinsInput: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 6,
+    padding: 12,
+    fontSize: 16,
+    color: '#111827',
+  },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -469,6 +631,10 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#F9FAFB',
+  },
+  disabledInput: {
+    backgroundColor: '#E5E7EB',
+    color: '#6B7280',
   },
   summaryBox: {
     backgroundColor: '#F9FAFB',

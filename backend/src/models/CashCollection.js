@@ -26,7 +26,7 @@ const cashCollectionSchema = new mongoose.Schema({
     noteValue: {
       type: Number,
       required: true,
-      enum: [1, 2, 5, 10, 20, 50, 100, 200, 500, 2000]
+      enum: [10, 20, 50, 100, 200, 500, 2000] // Removed 1, 2, 5 - now handled by coins field
     },
     noteCount: {
       type: Number,
@@ -38,6 +38,11 @@ const cashCollectionSchema = new mongoose.Schema({
       required: true
     }
   }],
+  coins: {
+    type: Number,
+    default: 0,
+    min: [0, 'Coins amount cannot be negative']
+  },
   totalCashCollected: {
     type: Number,
     required: [true, 'Total cash collected is required'],
@@ -58,11 +63,52 @@ const cashCollectionSchema = new mongoose.Schema({
     default: 0,
     min: [0, 'Credit amount cannot be negative']
   },
+  totalReceived: {
+    type: Number,
+    default: 0,
+    min: [0, 'Total received cannot be negative']
+  },
+  // NEW FIELDS - Credit Received Breakdown
+  creditReceivedCash: {
+    type: Number,
+    default: 0,
+    min: [0, 'Credit received cash cannot be negative']
+  },
+  creditReceivedCheque: {
+    type: Number,
+    default: 0,
+    min: [0, 'Credit received cheque cannot be negative']
+  },
+  // NEW FIELDS - Bounce Received Breakdown
+  bounceReceivedCash: {
+    type: Number,
+    default: 0,
+    min: [0, 'Bounce received cash cannot be negative']
+  },
+  bounceReceivedCheque: {
+    type: Number,
+    default: 0,
+    min: [0, 'Bounce received cheque cannot be negative']
+  },
+  // NEW FIELD - Empty Bottles
+  emptyBottlesReceived: {
+    type: Number,
+    default: 0,
+    min: [0, 'Empty bottles count cannot be negative']
+  },
   expectedCash: {
     type: Number,
     required: true
   },
   variance: {
+    type: Number,
+    default: 0
+  },
+  previousVariance: {
+    type: Number,
+    default: 0
+  },
+  cumulativeVariance: {
     type: Number,
     default: 0
   },
@@ -87,20 +133,25 @@ const cashCollectionSchema = new mongoose.Schema({
 });
 
 // Pre-save middleware to calculate totals and variance
-cashCollectionSchema.pre('save', function(next) {
-  // Calculate total cash from denominations
-  this.totalCashCollected = this.denominations.reduce((sum, denom) => {
+cashCollectionSchema.pre('save', async function(next) {
+  // Calculate total cash from denominations + coins
+  const denominationsTotal = this.denominations.reduce((sum, denom) => {
     denom.totalValue = denom.noteValue * denom.noteCount;
     return sum + denom.totalValue;
   }, 0);
   
-  // Calculate total received (cash + cheque + online)
-  const totalReceived = this.totalCashCollected + 
-                        (this.totalChequeReceived || 0) + 
-                        (this.totalOnlineReceived || 0);
+  this.totalCashCollected = denominationsTotal + (this.coins || 0);
   
-  // Calculate variance (total received + credit given - expected)
-  this.variance = (totalReceived + (this.totalCreditGiven || 0)) - this.expectedCash;
+  // Calculate total received (cash + cheque + online) and store it
+  this.totalReceived = this.totalCashCollected + 
+                       (this.totalChequeReceived || 0) + 
+                       (this.totalOnlineReceived || 0);
+  
+  // Calculate current day variance (total received + credit given - expected)
+  this.variance = (this.totalReceived + (this.totalCreditGiven || 0)) - this.expectedCash;
+  
+  // Calculate cumulative variance (previous variance + current variance)
+  this.cumulativeVariance = (this.previousVariance || 0) + this.variance;
   
   next();
 });

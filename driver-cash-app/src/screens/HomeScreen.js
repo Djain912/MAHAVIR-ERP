@@ -167,10 +167,10 @@ export default function HomeScreen({ navigation }) {
               <Text style={styles.statLabel}>Cash Collected</Text>
             </View>
             <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: stats.totalVariance < 0 ? '#DC2626' : '#16A34A' }]}>
-                ₹{(stats.totalVariance || 0).toLocaleString()}
+              <Text style={[styles.statValue, { color: (stats.cumulativeVariance || stats.totalVariance || 0) < 0 ? '#DC2626' : '#16A34A' }]}>
+                {(stats.cumulativeVariance || stats.totalVariance || 0) >= 0 ? '+' : ''}₹{Math.abs(stats.cumulativeVariance || stats.totalVariance || 0).toLocaleString()}
               </Text>
-              <Text style={styles.statLabel}>Total Variance</Text>
+              <Text style={styles.statLabel}>Running Variance</Text>
             </View>
             <View style={styles.statItem}>
               <Text style={styles.statValue}>{stats.verified || 0}</Text>

@@ -105,9 +105,15 @@ export default function CollectionDetailsScreen({ route }) {
             </Text>
           </View>
           <View style={[styles.summaryRow, styles.varianceRow]}>
-            <Text style={styles.varianceLabel}>Variance:</Text>
+            <Text style={styles.varianceLabel}>Day Variance:</Text>
             <Text style={[styles.varianceValue, { color: getVarianceColor(collection.variance || 0) }]}>
               {collection.variance >= 0 ? '+' : ''}₹{collection.variance?.toLocaleString() || '0'}
+            </Text>
+          </View>
+          <View style={[styles.summaryRow, styles.varianceRow]}>
+            <Text style={styles.varianceLabel}>Running Total:</Text>
+            <Text style={[styles.varianceValue, { color: getVarianceColor(collection.cumulativeVariance || 0) }]}>
+              {(collection.cumulativeVariance || 0) >= 0 ? '+' : ''}₹{Math.abs(collection.cumulativeVariance || 0).toLocaleString()}
             </Text>
           </View>
         </View>
@@ -129,6 +135,17 @@ export default function CollectionDetailsScreen({ route }) {
                 </Text>
               </View>
             ))}
+          
+          {/* Coins Section */}
+          {collection.coins > 0 && (
+            <View style={styles.coinsRow}>
+              <Text style={styles.coinsLabel}>🪙 Coins (₹1 + ₹2 + ₹5):</Text>
+              <Text style={styles.coinsValue}>
+                ₹{collection.coins.toLocaleString()}
+              </Text>
+            </View>
+          )}
+          
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total:</Text>
             <Text style={styles.totalValue}>
@@ -333,6 +350,27 @@ const styles = StyleSheet.create({
     color: '#16A34A',
     minWidth: 100,
     textAlign: 'right',
+  },
+  coinsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#FEF3C7',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+  },
+  coinsLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#92400E',
+  },
+  coinsValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#92400E',
   },
   totalRow: {
     flexDirection: 'row',

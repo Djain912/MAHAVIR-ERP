@@ -15,6 +15,11 @@ export const submitCashCollection = async (collectionData) => {
     totalChequeReceived,
     totalOnlineReceived,
     totalCreditGiven,
+    creditReceivedCash,
+    creditReceivedCheque,
+    bounceReceivedCash,
+    bounceReceivedCheque,
+    emptyBottlesReceived,
     expectedCash, 
     notes 
   } = collectionData;
@@ -56,17 +61,31 @@ export const submitCashCollection = async (collectionData) => {
     throw new Error('Cash collection already submitted for this dispatch');
   }
 
+  // Get the last collection for this driver to get previous cumulative variance
+  const lastCollection = await CashCollection.findOne({ driverId })
+    .sort({ collectionDate: -1, createdAt: -1 })
+    .select('cumulativeVariance');
+  
+  const previousVariance = lastCollection?.cumulativeVariance || 0;
+
   // Create cash collection
   const cashCollection = new CashCollection({
     driverId,
     dispatchId,
     collectionDate: collectionDate || new Date(),
     denominations,
+    coins: collectionData.coins || 0,
     totalCashCollected,
     totalChequeReceived: totalChequeReceived || 0,
     totalOnlineReceived: totalOnlineReceived || 0,
     totalCreditGiven: totalCreditGiven || 0,
+    creditReceivedCash: creditReceivedCash || 0,
+    creditReceivedCheque: creditReceivedCheque || 0,
+    bounceReceivedCash: bounceReceivedCash || 0,
+    bounceReceivedCheque: bounceReceivedCheque || 0,
+    emptyBottlesReceived: emptyBottlesReceived || 0,
     expectedCash,
+    previousVariance,
     notes,
     status: 'Submitted'
   });
@@ -260,17 +279,23 @@ export const getDriverCashStats = async (driverId, startDate, endDate) => {
     }
   }
 
-  const collections = await CashCollection.find(query);
+  const collections = await CashCollection.find(query).sort({ collectionDate: -1, createdAt: -1 });
 
   const stats = {
     totalCollections: collections.length,
     totalCashCollected: 0,
     totalExpectedCash: 0,
     totalVariance: 0,
+    cumulativeVariance: 0,
     submitted: 0,
     verified: 0,
     reconciled: 0
   };
+
+  // Get the latest cumulative variance (from most recent collection)
+  if (collections.length > 0) {
+    stats.cumulativeVariance = collections[0].cumulativeVariance || 0;
+  }
 
   collections.forEach(collection => {
     stats.totalCashCollected += collection.totalCashCollected;

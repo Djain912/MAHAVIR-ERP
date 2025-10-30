@@ -95,9 +95,16 @@ export default function CollectionHistoryScreen({ navigation }) {
         </View>
 
         <View style={styles.amountRow}>
-          <Text style={styles.label}>Variance:</Text>
+          <Text style={styles.label}>Day Variance:</Text>
           <Text style={[styles.value, { color: getVarianceColor(item.variance || 0) }]}>
             {item.variance >= 0 ? '+' : ''}₹{item.variance?.toLocaleString() || '0'}
+          </Text>
+        </View>
+
+        <View style={styles.amountRow}>
+          <Text style={styles.label}>Running Total:</Text>
+          <Text style={[styles.value, styles.cumulativeValue, { color: getVarianceColor(item.cumulativeVariance || 0) }]}>
+            {(item.cumulativeVariance || 0) >= 0 ? '+' : ''}₹{Math.abs(item.cumulativeVariance || 0).toLocaleString()}
           </Text>
         </View>
 

@@ -8,20 +8,64 @@ import mongoose from 'mongoose';
 const productSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: [true, 'Product name is required'],
     trim: true,
     maxlength: [200, 'Product name cannot exceed 200 characters']
   },
   size: {
     type: String,
-    required: [true, 'Product size is required'],
     trim: true,
     maxlength: [50, 'Size cannot exceed 50 characters']
   },
   pricePerUnit: {
     type: Number,
-    required: [true, 'Price per unit is required'],
     min: [0, 'Price cannot be negative']
+  },
+  // Additional fields from Excel data
+  headBrand: {
+    type: String,
+    trim: true
+  },
+  serialNumber: {
+    type: Number
+  },
+  srNo: {
+    type: Number
+  },
+  brandName: {
+    type: String,
+    trim: true
+  },
+  subSrNo: {
+    type: Number
+  },
+  brandFullName: {
+    type: String,
+    trim: true
+  },
+  ml: {
+    type: String,
+    trim: true
+  },
+  type: {
+    type: String,
+    trim: true
+  },
+  brand: {
+    type: String,
+    trim: true
+  },
+  mrp: {
+    type: String,
+    trim: true
+  },
+  packSize: {
+    type: String,
+    trim: true
+  },
+  purchaseRate: {
+    type: Number,
+    default: 0,
+    min: [0, 'Purchase rate cannot be negative']
   },
   active: {
     type: Boolean,
@@ -40,11 +84,11 @@ const productSchema = new mongoose.Schema({
 });
 
 // Indexes for performance optimization
-productSchema.index({ name: 1, size: 1 }, { unique: true }); // Prevent duplicates
+productSchema.index({ brandFullName: 1 }, { unique: true }); // Use brandFullName as unique identifier
 productSchema.index({ active: 1 }); // Active products filtering
 productSchema.index({ name: 1 }); // Name-based search
 productSchema.index({ active: 1, name: 1, size: 1 }); // Active products sorted
-productSchema.index({ name: 'text' }); // Text search
+productSchema.index({ name: 'text', brandFullName: 'text' }); // Text search
 
 const Product = mongoose.model('Product', productSchema);
 
