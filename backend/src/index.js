@@ -41,23 +41,12 @@ const app = express();
 connectDB();
 
 // Middleware
-const allowedOrigins = [
-  'http://localhost:3000',
-  'http://localhost:3001',
-  process.env.CORS_ORIGIN
-].filter(Boolean);
-
+// Allow all origins for easy development and mobile app access
 app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true
+  origin: '*', // Allow all origins
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json({ limit: '10mb' }));
@@ -113,10 +102,11 @@ app.use(errorHandler);
 
 // Start server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🚀 Server running in ${process.env.NODE_ENV || 'development'} mode`);
   console.log(`📡 Listening on port ${PORT}`);
   console.log(`🌐 API URL: http://localhost:${PORT}`);
+  console.log(`🌍 Network accessible on: http://<your-ip>:${PORT}`);
   console.log(`💊 Health check: http://localhost:${PORT}/health\n`);
 });
 
