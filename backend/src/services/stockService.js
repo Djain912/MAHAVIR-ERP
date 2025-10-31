@@ -5,6 +5,7 @@
 
 import StockIn from '../models/StockIn.js';
 import Product from '../models/Product.js';
+import Driver from '../models/Driver.js';
 import mongoose from 'mongoose';
 
 /**
@@ -251,4 +252,53 @@ export const getStockStats = async (startDate, endDate) => {
     totalQuantityRemaining: 0,
     totalBatches: 0
   };
+};
+
+/**
+ * Mark stock as damaged/returned
+ */
+export const returnDamagedStock = async (stockId, damageReason, damagedQuantity, userId) => {
+  const stock = await StockIn.findById(stockId);
+  
+  if (!stock) {
+    throw new Error('Stock record not found');
+  }
+  
+  if (stock.isDamaged) {
+    throw new Error('This stock is already marked as damaged');
+  }
+  
+  if (damagedQuantity > stock.remainingQuantity) {
+    throw new Error(`Cannot return ${damagedQuantity} units. Only ${stock.remainingQuantity} units available`);
+  }
+  
+  stock.isDamaged = true;
+  stock.damageReason = damageReason;
+  stock.damagedQuantity = damagedQuantity;
+  stock.returnedAt = new Date();
+  stock.returnedBy = userId;
+  stock.remainingQuantity -= damagedQuantity; // Reduce available stock
+  stock.updatedAt = Date.now();
+  
+  await stock.save();
+  await stock.populate('productId', 'name size pricePerUnit');
+  await stock.populate('returnedBy', 'name phone');
+  
+  return stock;
+};
+
+/**
+ * Get all damaged/returned stock
+ */
+export const getDamagedStock = async () => {
+  const damagedStock = await StockIn.find({ isDamaged: true })
+    .populate('productId', 'name size pricePerUnit category')
+    .populate('returnedBy', 'name phone role')
+    .sort({ returnedAt: -1 });
+  
+  return damagedStock.map(record => {
+    const obj = record.toObject();
+    obj.product = obj.productId;
+    return obj;
+  });
 };

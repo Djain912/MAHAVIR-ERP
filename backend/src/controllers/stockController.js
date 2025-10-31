@@ -20,11 +20,13 @@ export const createStockIn = async (req, res, next) => {
       dateReceived: req.body.dateReceived || new Date(),
       expiryDate: req.body.expiryDate,
       purchaseRate: req.body.purchaseRate,
-      sellingRate: req.body.sellingRate
+      isDamaged: req.body.isDamaged || false,
+      damageReason: req.body.damageReason,
+      damagedQuantity: req.body.damagedQuantity || 0
     };
     
     const stock = await stockService.createStockIn(stockData);
-    return successResponse(res, 201, 'Stock intake recorded successfully', stock);
+    return successResponse(res, 201, 'Purchase recorded successfully', stock);
   } catch (error) {
     next(error);
   }
@@ -112,6 +114,38 @@ export const getStockStats = async (req, res, next) => {
     const { startDate, endDate } = req.query;
     const stats = await stockService.getStockStats(startDate, endDate);
     return successResponse(res, 200, 'Stock statistics retrieved successfully', stats);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Mark stock as damaged/returned
+ * PATCH /api/stock/:id/return
+ */
+export const returnDamagedStock = async (req, res, next) => {
+  try {
+    const { damageReason, damagedQuantity } = req.body;
+    const stock = await stockService.returnDamagedStock(
+      req.params.id,
+      damageReason,
+      damagedQuantity,
+      req.user._id
+    );
+    return successResponse(res, 200, 'Purchase return recorded successfully', stock);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get all damaged/returned stock
+ * GET /api/stock/returns/list
+ */
+export const getDamagedStock = async (req, res, next) => {
+  try {
+    const damagedStock = await stockService.getDamagedStock();
+    return successResponse(res, 200, 'Damaged stock retrieved successfully', damagedStock);
   } catch (error) {
     next(error);
   }

@@ -1,342 +1,681 @@
-/**
- * Database Seeding Script
- * Cleans and populates database with comprehensive test data
- * Preserves User/Admin credentials
- */
+import mongoose from 'mongoose';/**
 
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import Driver from '../src/models/Driver.js';
-import Retailer from '../src/models/Retailer.js';
-import Wholesaler from '../src/models/Wholesaler.js';
-import Product from '../src/models/Product.js';
-import StockIn from '../src/models/StockIn.js';
-import DriverDispatch from '../src/models/DriverDispatch.js';
-import DriverDispatchItem from '../src/models/DriverDispatchItem.js';
-import Sale from '../src/models/Sale.js';
+import dotenv from 'dotenv'; * Database Seeding Script
+
+import bcrypt from 'bcryptjs'; * Cleans and populates database with comprehensive test data
+
+ * Preserves User/Admin credentials
+
+// Import models */
+
+import User from '../src/models/User.js';
+
+import Driver from '../src/models/Driver.js';import mongoose from 'mongoose';
+
+import Retailer from '../src/models/Retailer.js';import dotenv from 'dotenv';
+
+import Wholesaler from '../src/models/Wholesaler.js';import { fileURLToPath } from 'url';
+
+import Product from '../src/models/Product.js';import { dirname, join } from 'path';
+
+import StockIn from '../src/models/StockIn.js';import Driver from '../src/models/Driver.js';
+
+import DriverDispatch from '../src/models/DriverDispatch.js';import Retailer from '../src/models/Retailer.js';
+
+import CashCollection from '../src/models/CashCollection.js';import Wholesaler from '../src/models/Wholesaler.js';
+
+import Sale from '../src/models/Sale.js';import Product from '../src/models/Product.js';
+
+import CounterSale from '../src/models/CounterSale.js';import StockIn from '../src/models/StockIn.js';
+
+import Cheque from '../src/models/Cheque.js';import DriverDispatch from '../src/models/DriverDispatch.js';
+
+import Attendance from '../src/models/Attendance.js';import DriverDispatchItem from '../src/models/DriverDispatchItem.js';
+
+import Expense from '../src/models/Expense.js';import Sale from '../src/models/Sale.js';
+
 import CashCollection from '../src/models/CashCollection.js';
-import ChequeManagement from '../src/models/ChequeManagement.js';
+
+dotenv.config();import ChequeManagement from '../src/models/ChequeManagement.js';
+
 import PickListExtracted from '../src/models/PickListExtracted.js';
-import Attendance from '../src/models/Attendance.js';
-import Leave from '../src/models/Leave.js';
-import Expense from '../src/models/Expense.js';
-import SalaryAdvance from '../src/models/SalaryAdvance.js';
-import SalarySlip from '../src/models/SalarySlip.js';
+
+const clearAndSeedDatabase = async () => {import Attendance from '../src/models/Attendance.js';
+
+  try {import Leave from '../src/models/Leave.js';
+
+    console.log('🔌 Connecting to MongoDB...\n');import Expense from '../src/models/Expense.js';
+
+    await mongoose.connect(process.env.MONGODB_URI);import SalaryAdvance from '../src/models/SalaryAdvance.js';
+
+    console.log('✅ Connected to MongoDB\n');import SalarySlip from '../src/models/SalarySlip.js';
+
 import CounterSale from '../src/models/CounterSale.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+    // Save admin data
 
-// Load environment variables from parent directory
-dotenv.config({ path: join(__dirname, '..', '.env') });
+    console.log('💾 Saving admin user data...');const __filename = fileURLToPath(import.meta.url);
 
-// Connect to MongoDB
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('✅ MongoDB Connected');
-  } catch (error) {
+    const adminUser = await User.findOne({ phone: '9999999999' });const __dirname = dirname(__filename);
+
+    const adminData = adminUser ? {
+
+      name: adminUser.name,// Load environment variables from parent directory
+
+      phone: adminUser.phone,dotenv.config({ path: join(__dirname, '..', '.env') });
+
+      password: adminUser.password,
+
+      role: adminUser.role// Connect to MongoDB
+
+    } : null;const connectDB = async () => {
+
+      try {
+
+    if (adminData) {    await mongoose.connect(process.env.MONGODB_URI);
+
+      console.log(`✅ Admin user saved: ${adminData.name} (${adminData.phone})\n`);    console.log('✅ MongoDB Connected');
+
+    }  } catch (error) {
+
     console.error('❌ MongoDB connection error:', error);
-    process.exit(1);
-  }
-};
 
-// Clean all collections (except Admin users)
-const cleanDatabase = async () => {
-  console.log('\n🧹 Cleaning database...');
-  
-  // Delete all drivers except Admin role
-  const deletedDrivers = await Driver.deleteMany({ role: { $ne: 'Admin' } });
-  const deletedRetailers = await Retailer.deleteMany({});
-  const deletedWholesalers = await Wholesaler.deleteMany({});
-  const deletedProducts = await Product.deleteMany({});
-  const deletedStock = await StockIn.deleteMany({});
-  const deletedDispatches = await DriverDispatch.deleteMany({});
-  const deletedDispatchItems = await DriverDispatchItem.deleteMany({});
+    // Clear all collections    process.exit(1);
+
+    console.log('🗑️  Clearing database...');  }
+
+    await User.deleteMany({});};
+
+    await Driver.deleteMany({});
+
+    await Retailer.deleteMany({});// Clean all collections (except Admin users)
+
+    await Wholesaler.deleteMany({});const cleanDatabase = async () => {
+
+    await Product.deleteMany({});  console.log('\n🧹 Cleaning database...');
+
+    await StockIn.deleteMany({});  
+
+    await DriverDispatch.deleteMany({});  // Delete all drivers except Admin role
+
+    await CashCollection.deleteMany({});  const deletedDrivers = await Driver.deleteMany({ role: { $ne: 'Admin' } });
+
+    await Sale.deleteMany({});  const deletedRetailers = await Retailer.deleteMany({});
+
+    await CounterSale.deleteMany({});  const deletedWholesalers = await Wholesaler.deleteMany({});
+
+    await Cheque.deleteMany({});  const deletedProducts = await Product.deleteMany({});
+
+    await Attendance.deleteMany({});  const deletedStock = await StockIn.deleteMany({});
+
+    await Expense.deleteMany({});  const deletedDispatches = await DriverDispatch.deleteMany({});
+
+    console.log('✅ All collections cleared\n');  const deletedDispatchItems = await DriverDispatchItem.deleteMany({});
+
   const deletedSales = await Sale.deleteMany({});
-  const deletedCashCollections = await CashCollection.deleteMany({});
-  const deletedCheques = await ChequeManagement.deleteMany({});
-  const deletedPickListsExtracted = await PickListExtracted.deleteMany({});
-  const deletedAttendance = await Attendance.deleteMany({});
-  const deletedLeaves = await Leave.deleteMany({});
-  const deletedExpenses = await Expense.deleteMany({});
-  const deletedSalaryAdvances = await SalaryAdvance.deleteMany({});
-  const deletedSalarySlips = await SalarySlip.deleteMany({});
-  const deletedCounterSales = await CounterSale.deleteMany({});
-  
+
+    // Restore admin  const deletedCashCollections = await CashCollection.deleteMany({});
+
+    console.log('👤 Restoring admin user...');  const deletedCheques = await ChequeManagement.deleteMany({});
+
+    const restoredAdmin = new User({  const deletedPickListsExtracted = await PickListExtracted.deleteMany({});
+
+      name: adminData?.name || 'Admin User',  const deletedAttendance = await Attendance.deleteMany({});
+
+      phone: adminData?.phone || '9999999999',  const deletedLeaves = await Leave.deleteMany({});
+
+      password: adminData?.password || await bcrypt.hash('admin123', 10),  const deletedExpenses = await Expense.deleteMany({});
+
+      role: 'Admin'  const deletedSalaryAdvances = await SalaryAdvance.deleteMany({});
+
+    });  const deletedSalarySlips = await SalarySlip.deleteMany({});
+
+    await restoredAdmin.save();  const deletedCounterSales = await CounterSale.deleteMany({});
+
+    console.log(`✅ Admin restored: ${restoredAdmin.name} (${restoredAdmin.phone})\n`);  
+
   console.log('✅ Database cleaned:');
-  console.log(`   - Drivers (non-admin): ${deletedDrivers.deletedCount}`);
-  console.log(`   - Retailers: ${deletedRetailers.deletedCount}`);
-  console.log(`   - Wholesalers: ${deletedWholesalers.deletedCount}`);
-  console.log(`   - Products: ${deletedProducts.deletedCount}`);
-  console.log(`   - Stock: ${deletedStock.deletedCount}`);
-  console.log(`   - Dispatches: ${deletedDispatches.deletedCount}`);
-  console.log(`   - Dispatch Items: ${deletedDispatchItems.deletedCount}`);
-  console.log(`   - Sales: ${deletedSales.deletedCount}`);
-  console.log(`   - Cash Collections: ${deletedCashCollections.deletedCount}`);
-  console.log(`   - Cheques: ${deletedCheques.deletedCount}`);
-  console.log(`   - PickLists Extracted: ${deletedPickListsExtracted.deletedCount}`);
-  console.log(`   - Attendance: ${deletedAttendance.deletedCount}`);
-  console.log(`   - Leaves: ${deletedLeaves.deletedCount}`);
-  console.log(`   - Expenses: ${deletedExpenses.deletedCount}`);
-  console.log(`   - Salary Advances: ${deletedSalaryAdvances.deletedCount}`);
-  console.log(`   - Salary Slips: ${deletedSalarySlips.deletedCount}`);
-  console.log(`   - Counter Sales: ${deletedCounterSales.deletedCount}`);
-  console.log('   ✅ Admin users preserved');
-};
 
-// Seed data
-const seedData = async () => {
-  console.log('\n🌱 Seeding database...\n');
+    // Create Products  console.log(`   - Drivers (non-admin): ${deletedDrivers.deletedCount}`);
 
-  // 0. Create/Ensure Admin User exists
-  console.log('👤 Creating admin user...');
-  let adminUser = await Driver.findOne({ role: 'Admin', phone: '9999999999' });
-  if (!adminUser) {
-    adminUser = await Driver.create({
-      name: 'Admin User',
-      phone: '9999999999',
-      password: 'admin123',
-      role: 'Admin',
+    console.log('📦 Creating products...');  console.log(`   - Retailers: ${deletedRetailers.deletedCount}`);
+
+    const products = [  console.log(`   - Wholesalers: ${deletedWholesalers.deletedCount}`);
+
+      { name: 'Coca-Cola 200ml', category: 'Soft Drink', price: 10, wholesalePrice: 8, unit: 'bottle' },  console.log(`   - Products: ${deletedProducts.deletedCount}`);
+
+      { name: 'Coca-Cola 300ml', category: 'Soft Drink', price: 15, wholesalePrice: 12, unit: 'bottle' },  console.log(`   - Stock: ${deletedStock.deletedCount}`);
+
+      { name: 'Coca-Cola 500ml', category: 'Soft Drink', price: 20, wholesalePrice: 16, unit: 'bottle' },  console.log(`   - Dispatches: ${deletedDispatches.deletedCount}`);
+
+      { name: 'Coca-Cola 750ml', category: 'Soft Drink', price: 35, wholesalePrice: 28, unit: 'bottle' },  console.log(`   - Dispatch Items: ${deletedDispatchItems.deletedCount}`);
+
+      { name: 'Coca-Cola 1L', category: 'Soft Drink', price: 40, wholesalePrice: 32, unit: 'bottle' },  console.log(`   - Sales: ${deletedSales.deletedCount}`);
+
+      { name: 'Coca-Cola 2L', category: 'Soft Drink', price: 80, wholesalePrice: 65, unit: 'bottle' },  console.log(`   - Cash Collections: ${deletedCashCollections.deletedCount}`);
+
+      { name: 'Sprite 200ml', category: 'Soft Drink', price: 10, wholesalePrice: 8, unit: 'bottle' },  console.log(`   - Cheques: ${deletedCheques.deletedCount}`);
+
+      { name: 'Sprite 500ml', category: 'Soft Drink', price: 20, wholesalePrice: 16, unit: 'bottle' },  console.log(`   - PickLists Extracted: ${deletedPickListsExtracted.deletedCount}`);
+
+      { name: 'Sprite 1L', category: 'Soft Drink', price: 40, wholesalePrice: 32, unit: 'bottle' },  console.log(`   - Attendance: ${deletedAttendance.deletedCount}`);
+
+      { name: 'Thums Up 200ml', category: 'Soft Drink', price: 10, wholesalePrice: 8, unit: 'bottle' },  console.log(`   - Leaves: ${deletedLeaves.deletedCount}`);
+
+      { name: 'Thums Up 500ml', category: 'Soft Drink', price: 20, wholesalePrice: 16, unit: 'bottle' },  console.log(`   - Expenses: ${deletedExpenses.deletedCount}`);
+
+      { name: 'Fanta 200ml', category: 'Soft Drink', price: 10, wholesalePrice: 8, unit: 'bottle' },  console.log(`   - Salary Advances: ${deletedSalaryAdvances.deletedCount}`);
+
+      { name: 'Fanta 500ml', category: 'Soft Drink', price: 20, wholesalePrice: 16, unit: 'bottle' },  console.log(`   - Salary Slips: ${deletedSalarySlips.deletedCount}`);
+
+      { name: 'Maaza 200ml', category: 'Juice', price: 15, wholesalePrice: 12, unit: 'bottle' },  console.log(`   - Counter Sales: ${deletedCounterSales.deletedCount}`);
+
+      { name: 'Maaza 600ml', category: 'Juice', price: 30, wholesalePrice: 24, unit: 'bottle' },  console.log('   ✅ Admin users preserved');
+
+      { name: 'Limca 200ml', category: 'Soft Drink', price: 10, wholesalePrice: 8, unit: 'bottle' },};
+
+      { name: 'Limca 500ml', category: 'Soft Drink', price: 20, wholesalePrice: 16, unit: 'bottle' },
+
+    ];// Seed data
+
+    const createdProducts = await Product.insertMany(products);const seedData = async () => {
+
+    console.log(`✅ Created ${createdProducts.length} products\n`);  console.log('\n🌱 Seeding database...\n');
+
+
+
+    // Create Drivers  // 0. Create/Ensure Admin User exists
+
+    console.log('🚗 Creating drivers...');  console.log('👤 Creating admin user...');
+
+    const driverData = [  let adminUser = await Driver.findOne({ role: 'Admin', phone: '9999999999' });
+
+      { name: 'Rajesh Kumar', phone: '9876543210', salary: 15000 },  if (!adminUser) {
+
+      { name: 'Amit Singh', phone: '9876543211', salary: 14000 },    adminUser = await Driver.create({
+
+      { name: 'Vijay Sharma', phone: '9876543212', salary: 15500 },      name: 'Admin User',
+
+      { name: 'Manoj Yadav', phone: '9876543213', salary: 14500 },      phone: '9999999999',
+
+      { name: 'Suresh Verma', phone: '9876543214', salary: 15000 },      password: 'admin123',
+
+    ];      role: 'Admin',
+
       active: true
-    });
-    console.log('✅ Admin user created (Phone: 9999999999, Password: admin123)');
+
+    const drivers = [];    });
+
+    const defaultPassword = await bcrypt.hash('123456', 10);    console.log('✅ Admin user created (Phone: 9999999999, Password: admin123)');
+
   } else {
-    console.log('✅ Admin user already exists (Phone: 9999999999)');
-  }
 
-  // 1. Create Products
-  console.log('\n📦 Creating products...');
-  const products = await Product.insertMany([
-    { name: 'Coca-Cola', size: '300ml', pricePerUnit: 20, active: true },
-    { name: 'Coca-Cola', size: '500ml', pricePerUnit: 35, active: true },
+    for (const dData of driverData) {    console.log('✅ Admin user already exists (Phone: 9999999999)');
+
+      const user = new User({  }
+
+        name: dData.name,
+
+        phone: dData.phone,  // 1. Create Products
+
+        password: defaultPassword,  console.log('\n📦 Creating products...');
+
+        role: 'Driver'  const products = await Product.insertMany([
+
+      });    { name: 'Coca-Cola', size: '300ml', pricePerUnit: 20, active: true },
+
+      await user.save();    { name: 'Coca-Cola', size: '500ml', pricePerUnit: 35, active: true },
+
     { name: 'Coca-Cola', size: '1L', pricePerUnit: 60, active: true },
-    { name: 'Sprite', size: '300ml', pricePerUnit: 20, active: true },
-    { name: 'Sprite', size: '500ml', pricePerUnit: 35, active: true },
-    { name: 'Fanta', size: '300ml', pricePerUnit: 20, active: true },
-    { name: 'Fanta', size: '500ml', pricePerUnit: 35, active: true },
-    { name: 'Minute Maid', size: '300ml', pricePerUnit: 25, active: true },
-    { name: 'Thums Up', size: '500ml', pricePerUnit: 35, active: true },
-    { name: 'Limca', size: '500ml', pricePerUnit: 35, active: true }
-  ]);
-  console.log(`✅ Created ${products.length} products`);
 
-  // 2. Create Stock Entries
+      const driver = new Driver({    { name: 'Sprite', size: '300ml', pricePerUnit: 20, active: true },
+
+        name: dData.name,    { name: 'Sprite', size: '500ml', pricePerUnit: 35, active: true },
+
+        phone: dData.phone,    { name: 'Fanta', size: '300ml', pricePerUnit: 20, active: true },
+
+        userId: user._id,    { name: 'Fanta', size: '500ml', pricePerUnit: 35, active: true },
+
+        monthlySalary: dData.salary,    { name: 'Minute Maid', size: '300ml', pricePerUnit: 25, active: true },
+
+        active: true    { name: 'Thums Up', size: '500ml', pricePerUnit: 35, active: true },
+
+      });    { name: 'Limca', size: '500ml', pricePerUnit: 35, active: true }
+
+      await driver.save();  ]);
+
+      drivers.push(driver);  console.log(`✅ Created ${products.length} products`);
+
+    }
+
+    console.log(`✅ Created ${drivers.length} drivers\n`);  // 2. Create Stock Entries
+
   console.log('\n📊 Creating stock entries...');
-  const stockEntries = [];
-  const stockDates = [
-    new Date('2025-10-01'),
-    new Date('2025-10-08'),
-    new Date('2025-10-15'),
-    new Date('2025-10-22')
-  ];
 
-  for (let i = 0; i < stockDates.length; i++) {
-    const date = stockDates[i];
-    for (let j = 0; j < products.length; j++) {
-      const product = products[j];
-      const quantity = Math.floor(Math.random() * 500) + 200;
-      const batchNo = `BATCH-${date.getFullYear()}${(date.getMonth()+1).toString().padStart(2,'0')}-${(j+1).toString().padStart(3,'0')}`;
-      const expiryDate = new Date(date);
-      expiryDate.setMonth(expiryDate.getMonth() + 6); // 6 months expiry
+    // Create Retailers  const stockEntries = [];
+
+    console.log('🏪 Creating retailers...');  const stockDates = [
+
+    const retailerData = [    new Date('2025-10-01'),
+
+      { name: 'ABC Store', ownerName: 'Ramesh Kumar', phone: '9123456780', address: 'Shop 12, Main Market, Delhi', gst: 'GST001' },    new Date('2025-10-08'),
+
+      { name: 'XYZ Mart', ownerName: 'Suresh Patel', phone: '9123456781', address: 'Plot 45, Sector 15, Noida', gst: 'GST002' },    new Date('2025-10-15'),
+
+      { name: 'City Bazaar', ownerName: 'Vijay Sharma', phone: '9123456782', address: '23, Mall Road, Gurgaon', gst: 'GST003' },    new Date('2025-10-22')
+
+      { name: 'Quick Shop', ownerName: 'Anil Verma', phone: '9123456783', address: '78, Commercial Street, Delhi', gst: 'GST004' },  ];
+
+      { name: 'Super Market', ownerName: 'Manoj Singh', phone: '9123456784', address: '56, Central Avenue, Faridabad', gst: 'GST005' },
+
+    ];  for (let i = 0; i < stockDates.length; i++) {
+
+    const retailers = await Retailer.insertMany(retailerData.map(r => ({    const date = stockDates[i];
+
+      ...r,    for (let j = 0; j < products.length; j++) {
+
+      creditLimit: Math.floor(Math.random() * 50000) + 20000,      const product = products[j];
+
+      currentBalance: 0,      const quantity = Math.floor(Math.random() * 500) + 200;
+
+      active: true      const batchNo = `BATCH-${date.getFullYear()}${(date.getMonth()+1).toString().padStart(2,'0')}-${(j+1).toString().padStart(3,'0')}`;
+
+    })));      const expiryDate = new Date(date);
+
+    console.log(`✅ Created ${retailers.length} retailers\n`);      expiryDate.setMonth(expiryDate.getMonth() + 6); // 6 months expiry
+
       
-      stockEntries.push({
-        productId: product._id,
-        quantity: quantity,
-        batchNo: batchNo,
-        dateReceived: date,
-        expiryDate: expiryDate,
-        purchaseRate: product.pricePerUnit * 0.85, // 85% of selling price
-        sellingRate: product.pricePerUnit,
-        remainingQuantity: quantity
-      });
-    }
-  }
-  await StockIn.insertMany(stockEntries);
-  console.log(`✅ Created ${stockEntries.length} stock entries`);
 
-  // 3. Create Drivers
-  console.log('\n🚚 Creating drivers...');
-  const driverData = [
-    {
-      name: 'Rajesh Kumar',
-      phone: '9876543210',
-      password: '123456',
-      role: 'Driver',
-      salary: 15000,
-      active: true
+    // Create Wholesalers      stockEntries.push({
+
+    console.log('🏭 Creating wholesalers...');        productId: product._id,
+
+    const wholesalerData = [        quantity: quantity,
+
+      { name: 'Delhi Beverages', ownerName: 'Ramesh Enterprises', phone: '9876500001', address: 'Warehouse 45, Industrial Area, Delhi', gst: 'GSTW001' },        batchNo: batchNo,
+
+      { name: 'NCR Distributors', ownerName: 'Singh Trading Co.', phone: '9876500002', address: 'Plot 78, Sector 25, Noida', gst: 'GSTW002' },        dateReceived: date,
+
+      { name: 'Capital Drinks', ownerName: 'Gupta Brothers', phone: '9876500003', address: '234, Main Road, Gurgaon', gst: 'GSTW003' },        expiryDate: expiryDate,
+
+    ];        purchaseRate: product.pricePerUnit * 0.85, // 85% of selling price
+
+    const wholesalers = await Wholesaler.insertMany(wholesalerData.map(w => ({        sellingRate: product.pricePerUnit,
+
+      ...w,        remainingQuantity: quantity
+
+      creditLimit: Math.floor(Math.random() * 200000) + 100000,      });
+
+      currentBalance: 0,    }
+
+      active: true  }
+
+    })));  await StockIn.insertMany(stockEntries);
+
+    console.log(`✅ Created ${wholesalers.length} wholesalers\n`);  console.log(`✅ Created ${stockEntries.length} stock entries`);
+
+
+
+    // Create Stock  // 3. Create Drivers
+
+    console.log('📊 Creating stock entries...');  console.log('\n🚚 Creating drivers...');
+
+    const stockEntries = [];  const driverData = [
+
+    for (const product of createdProducts) {    {
+
+      const quantity = Math.floor(Math.random() * 500) + 200;      name: 'Rajesh Kumar',
+
+      stockEntries.push({      phone: '9876543210',
+
+        productId: product._id,      password: '123456',
+
+        quantity,      role: 'Driver',
+
+        pricePerUnit: product.wholesalePrice,      salary: 15000,
+
+        totalCost: quantity * product.wholesalePrice,      active: true
+
+        supplier: wholesalers[0].name,    },
+
+        receivedDate: new Date(),    {
+
+        batchNumber: `BATCH-${Math.floor(Math.random() * 9000) + 1000}`,      name: 'Amit Sharma',
+
+        status: 'Received'      phone: '9876543211',
+
+      });      password: '123456',
+
+    }      role: 'Driver',
+
+    await StockIn.insertMany(stockEntries);      salary: 14000,
+
+    console.log(`✅ Created ${stockEntries.length} stock entries\n`);      active: true
+
     },
-    {
-      name: 'Amit Sharma',
-      phone: '9876543211',
-      password: '123456',
-      role: 'Driver',
-      salary: 14000,
-      active: true
-    },
-    {
-      name: 'Vikram Singh',
-      phone: '9876543212',
-      password: '123456',
-      role: 'Driver',
-      salary: 16000,
-      active: true
-    },
-    {
-      name: 'Pradeep Verma',
-      phone: '9876543213',
-      password: '123456',
-      role: 'Driver',
-      salary: 13500,
-      active: true
-    },
-    {
-      name: 'Sunil Yadav',
-      phone: '9876543214',
-      password: '123456',
-      role: 'Driver',
-      salary: 14500,
-      active: true
-    },
-    {
-      name: 'Ramesh Pal (Inactive)',
-      phone: '9876543215',
-      password: '123456',
-      role: 'Driver',
-      salary: 12000,
-      active: false
-    }
-  ];
-  
-  // Create drivers one by one to trigger password hashing middleware
-  const drivers = [];
-  for (const data of driverData) {
-    const driver = await Driver.create(data);
-    drivers.push(driver);
-  }
-  console.log(`✅ Created ${drivers.length} drivers (1 inactive)`);
+
+    // Create Dispatches (last 10 days)    {
+
+    console.log('🚚 Creating dispatches...');      name: 'Vikram Singh',
+
+    const dispatches = [];      phone: '9876543212',
+
+    const today = new Date();      password: '123456',
+
+          role: 'Driver',
+
+    for (let day = 0; day < 10; day++) {      salary: 16000,
+
+      const dispatchDate = new Date(today);      active: true
+
+      dispatchDate.setDate(today.getDate() - day);    },
+
+          {
+
+      for (let i = 0; i < 2; i++) {      name: 'Pradeep Verma',
+
+        const driver = drivers[Math.floor(Math.random() * drivers.length)];      phone: '9876543213',
+
+        const productCount = Math.floor(Math.random() * 5) + 3;      password: '123456',
+
+              role: 'Driver',
+
+        const products = [];      salary: 13500,
+
+        let totalValue = 0;      active: true
+
+            },
+
+        for (let j = 0; j < productCount; j++) {    {
+
+          const product = createdProducts[Math.floor(Math.random() * createdProducts.length)];      name: 'Sunil Yadav',
+
+          const quantity = Math.floor(Math.random() * 30) + 10;      phone: '9876543214',
+
+          const value = quantity * product.price;      password: '123456',
+
+                role: 'Driver',
+
+          products.push({      salary: 14500,
+
+            productId: product._id,      active: true
+
+            quantity,    },
+
+            pricePerUnit: product.price,    {
+
+            totalValue: value      name: 'Ramesh Pal (Inactive)',
+
+          });      phone: '9876543215',
+
+                password: '123456',
+
+          totalValue += value;      role: 'Driver',
+
+        }      salary: 12000,
+
+              active: false
+
+        dispatches.push({    }
+
+          driverId: driver._id,  ];
+
+          dispatchDate,  
+
+          products,  // Create drivers one by one to trigger password hashing middleware
+
+          totalStockValue: totalValue,  const drivers = [];
+
+          status: day === 0 ? 'Active' : 'Completed'  for (const data of driverData) {
+
+        });    const driver = await Driver.create(data);
+
+      }    drivers.push(driver);
+
+    }  }
+
+    const createdDispatches = await DriverDispatch.insertMany(dispatches);  console.log(`✅ Created ${drivers.length} drivers (1 inactive)`);
+
+    console.log(`✅ Created ${createdDispatches.length} dispatches\n`);
 
   // 4. Create Retailers
-  console.log('\n🏪 Creating retailers...');
-  const retailers = await Retailer.insertMany([
-    {
-      name: 'Khan General Store',
-      ownerName: 'Mohammad Khan',
-      phone: '9123456780',
-      address: 'Shop 12, Connaught Place, New Delhi',
-      route: 'Route A - Central Delhi',
-      gstNumber: 'GST001',
-      creditLimit: 50000,
-      outstandingBalance: 0,
-      active: true
-    },
-    {
-      name: 'Gupta Supermart',
-      ownerName: 'Ramesh Gupta',
-      phone: '9123456781',
-      address: 'Block C, Lajpat Nagar, New Delhi',
-      route: 'Route A - Central Delhi',
-      gstNumber: 'GST002',
-      creditLimit: 75000,
-      outstandingBalance: 0,
-      active: true
-    },
-    {
-      name: 'Sharma Provisions',
-      ownerName: 'Vijay Sharma',
-      phone: '9123456782',
-      address: 'Market Road, Karol Bagh, New Delhi',
-      route: 'Route B - West Delhi',
-      gstNumber: 'GST003',
-      creditLimit: 40000,
-      outstandingBalance: 0,
-      active: true
-    },
-    {
-      name: 'Singh Mart',
-      ownerName: 'Harpreet Singh',
-      phone: '9123456783',
-      address: '45, Rajouri Garden, New Delhi',
-      route: 'Route B - West Delhi',
-      gstNumber: 'GST004',
-      creditLimit: 60000,
-      outstandingBalance: 0,
-      active: true
-    },
-    {
-      name: 'Verma Stores',
-      ownerName: 'Sunil Verma',
-      phone: '9123456784',
-      address: 'Mayur Vihar Phase 1, New Delhi',
-      route: 'Route C - East Delhi',
-      gstNumber: 'GST005',
-      creditLimit: 55000,
-      outstandingBalance: 0,
-      active: true
-    },
-    {
-      name: 'Jain Supermarket',
-      ownerName: 'Ashok Jain',
-      phone: '9123456785',
-      address: 'Preet Vihar, New Delhi',
-      route: 'Route C - East Delhi',
-      gstNumber: 'GST006',
-      creditLimit: 70000,
-      outstandingBalance: 0,
-      active: true
-    },
-    {
-      name: 'Bansal Retail',
-      ownerName: 'Manoj Bansal',
-      phone: '9123456786',
-      address: 'Dwarka Sector 10, New Delhi',
-      route: 'Route D - South Delhi',
-      gstNumber: 'GST007',
-      creditLimit: 45000,
-      outstandingBalance: 0,
-      active: true
-    },
-    {
-      name: 'Agarwal Stores',
-      ownerName: 'Rakesh Agarwal',
-      phone: '9123456787',
-      address: 'Saket, New Delhi',
-      route: 'Route D - South Delhi',
-      gstNumber: 'GST008',
-      creditLimit: 80000,
-      outstandingBalance: 0,
-      active: true
-    },
-    {
-      name: 'Chopra General Store',
-      ownerName: 'Ravi Chopra',
-      phone: '9123456788',
-      address: 'Rohini Sector 7, New Delhi',
-      route: 'Route E - North Delhi',
-      gstNumber: 'GST009',
-      creditLimit: 35000,
-      outstandingBalance: 0,
-      active: true
-    },
-    {
-      name: 'Malhotra Mart',
-      ownerName: 'Sanjay Malhotra',
-      phone: '9123456789',
-      address: 'Pitampura, New Delhi',
-      route: 'Route E - North Delhi',
-      gstNumber: 'GST010',
-      creditLimit: 50000,
-      outstandingBalance: 0,
-      active: false // Inactive retailer
-    }
-  ]);
-  console.log(`✅ Created ${retailers.length} retailers (1 inactive)`);
 
-  // 5. Create Wholesalers
-  console.log('\n🏭 Creating wholesalers...');
-  const wholesalers = await Wholesaler.insertMany([
+    // Create Cash Collections with variance  console.log('\n🏪 Creating retailers...');
+
+    console.log('💰 Creating cash collections...');  const retailers = await Retailer.insertMany([
+
+    const collections = [];    {
+
+    const completedDispatches = createdDispatches.filter(d => d.status === 'Completed');      name: 'Khan General Store',
+
+          ownerName: 'Mohammad Khan',
+
+    for (const dispatch of completedDispatches) {      phone: '9123456780',
+
+      const expectedCash = dispatch.totalStockValue;      address: 'Shop 12, Connaught Place, New Delhi',
+
+      const varianceAmount = Math.floor((Math.random() - 0.5) * 1000);      route: 'Route A - Central Delhi',
+
+      const actualCash = expectedCash + varianceAmount;      gstNumber: 'GST001',
+
+            creditLimit: 50000,
+
+      const denominations = [];      outstandingBalance: 0,
+
+      let remaining = Math.abs(actualCash);      active: true
+
+      const denoms = [2000, 500, 200, 100, 50, 20, 10];    },
+
+          {
+
+      for (const denom of denoms) {      name: 'Gupta Supermart',
+
+        if (remaining >= denom) {      ownerName: 'Ramesh Gupta',
+
+          const count = Math.floor(remaining / denom);      phone: '9123456781',
+
+          if (count > 0) {      address: 'Block C, Lajpat Nagar, New Delhi',
+
+            denominations.push({      route: 'Route A - Central Delhi',
+
+              noteValue: denom,      gstNumber: 'GST002',
+
+              noteCount: count,      creditLimit: 75000,
+
+              totalValue: count * denom      outstandingBalance: 0,
+
+            });      active: true
+
+            remaining -= count * denom;    },
+
+          }    {
+
+        }      name: 'Sharma Provisions',
+
+      }      ownerName: 'Vijay Sharma',
+
+            phone: '9123456782',
+
+      collections.push({      address: 'Market Road, Karol Bagh, New Delhi',
+
+        driverId: dispatch.driverId,      route: 'Route B - West Delhi',
+
+        dispatchId: dispatch._id,      gstNumber: 'GST003',
+
+        collectionDate: dispatch.dispatchDate,      creditLimit: 40000,
+
+        denominations,      outstandingBalance: 0,
+
+        coins: remaining,      active: true
+
+        totalCashCollected: actualCash,    },
+
+        totalChequeReceived: 0,    {
+
+        totalOnlineReceived: 0,      name: 'Singh Mart',
+
+        totalCreditGiven: 0,      ownerName: 'Harpreet Singh',
+
+        expectedCash,      phone: '9123456783',
+
+        status: 'Verified',      address: '45, Rajouri Garden, New Delhi',
+
+        creditReceivedCash: 0,      route: 'Route B - West Delhi',
+
+        creditReceivedCheque: 0,      gstNumber: 'GST004',
+
+        bounceReceivedCash: 0,      creditLimit: 60000,
+
+        bounceReceivedCheque: 0,      outstandingBalance: 0,
+
+        emptyBottlesReceived: Math.floor(Math.random() * 20)      active: true
+
+      });    },
+
+    }    {
+
+    await CashCollection.insertMany(collections);      name: 'Verma Stores',
+
+          ownerName: 'Sunil Verma',
+
+    // Calculate cumulative variance      phone: '9123456784',
+
+    console.log('🔄 Calculating cumulative variance...');      address: 'Mayur Vihar Phase 1, New Delhi',
+
+    const driverIds = await CashCollection.distinct('driverId');      route: 'Route C - East Delhi',
+
+          gstNumber: 'GST005',
+
+    for (const driverId of driverIds) {      creditLimit: 55000,
+
+      const driverCollections = await CashCollection.find({ driverId })      outstandingBalance: 0,
+
+        .sort({ collectionDate: 1, createdAt: 1 });      active: true
+
+    },
+
+      let runningVariance = 0;    {
+
+      name: 'Jain Supermarket',
+
+      for (const collection of driverCollections) {      ownerName: 'Ashok Jain',
+
+        const totalReceived =       phone: '9123456785',
+
+          (collection.totalCashCollected || 0) +       address: 'Preet Vihar, New Delhi',
+
+          (collection.totalChequeReceived || 0) +       route: 'Route C - East Delhi',
+
+          (collection.totalOnlineReceived || 0);      gstNumber: 'GST006',
+
+      creditLimit: 70000,
+
+        const dailyVariance =       outstandingBalance: 0,
+
+          (totalReceived + (collection.totalCreditGiven || 0)) -       active: true
+
+          (collection.expectedCash || 0);    },
+
+    {
+
+        await CashCollection.updateOne(      name: 'Bansal Retail',
+
+          { _id: collection._id },      ownerName: 'Manoj Bansal',
+
+          {      phone: '9123456786',
+
+            $set: {      address: 'Dwarka Sector 10, New Delhi',
+
+              previousVariance: runningVariance,      route: 'Route D - South Delhi',
+
+              variance: dailyVariance,      gstNumber: 'GST007',
+
+              cumulativeVariance: runningVariance + dailyVariance,      creditLimit: 45000,
+
+              totalReceived: totalReceived      outstandingBalance: 0,
+
+            }      active: true
+
+          }    },
+
+        );    {
+
+      name: 'Agarwal Stores',
+
+        runningVariance += dailyVariance;      ownerName: 'Rakesh Agarwal',
+
+      }      phone: '9123456787',
+
+    }      address: 'Saket, New Delhi',
+
+    console.log(`✅ Created ${collections.length} cash collections\n`);      route: 'Route D - South Delhi',
+
+      gstNumber: 'GST008',
+
+    // Summary      creditLimit: 80000,
+
+    console.log('\n' + '='.repeat(60));      outstandingBalance: 0,
+
+    console.log('✨ DATABASE SEEDED SUCCESSFULLY!');      active: true
+
+    console.log('='.repeat(60));    },
+
+    console.log('\n📊 Summary:');    {
+
+    console.log(`   👤 Admin: ${restoredAdmin.phone} / admin123`);      name: 'Chopra General Store',
+
+    console.log(`   🚗 Drivers: ${drivers.length} (phone / 123456)`);      ownerName: 'Ravi Chopra',
+
+    console.log(`   🏪 Retailers: ${retailers.length}`);      phone: '9123456788',
+
+    console.log(`   🏭 Wholesalers: ${wholesalers.length}`);      address: 'Rohini Sector 7, New Delhi',
+
+    console.log(`   📦 Products: ${createdProducts.length}`);      route: 'Route E - North Delhi',
+
+    console.log(`   🚚 Dispatches: ${createdDispatches.length}`);      gstNumber: 'GST009',
+
+    console.log(`   💰 Collections: ${collections.length} (with cumulative variance)`);      creditLimit: 35000,
+
+    console.log('\n' + '='.repeat(60));      outstandingBalance: 0,
+
+      active: true
+
+  } catch (error) {    },
+
+    console.error('\n❌ Error:', error);    {
+
+    throw error;      name: 'Malhotra Mart',
+
+  } finally {      ownerName: 'Sanjay Malhotra',
+
+    await mongoose.disconnect();      phone: '9123456789',
+
+    console.log('\n🔌 Disconnected from MongoDB');      address: 'Pitampura, New Delhi',
+
+  }      route: 'Route E - North Delhi',
+
+};      gstNumber: 'GST010',
+
+      creditLimit: 50000,
+
+clearAndSeedDatabase()      outstandingBalance: 0,
+
+  .then(() => {      active: false // Inactive retailer
+
+    console.log('\n✨ Done!');    }
+
+    process.exit(0);  ]);
+
+  })  console.log(`✅ Created ${retailers.length} retailers (1 inactive)`);
+
+  .catch((error) => {
+
+    console.error('\n💥 Fatal error:', error);  // 5. Create Wholesalers
+
+    process.exit(1);  console.log('\n🏭 Creating wholesalers...');
+
+  });  const wholesalers = await Wholesaler.insertMany([
+
     {
       name: 'Metro Cash & Carry',
       ownerName: 'Rajiv Mehta',

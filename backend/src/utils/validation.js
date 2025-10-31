@@ -91,9 +91,19 @@ export const stockValidation = {
       'number.min': 'Purchase rate cannot be negative',
       'any.required': 'Purchase rate is required'
     }),
-    sellingRate: Joi.number().min(0).required().messages({
-      'number.min': 'Selling rate cannot be negative',
-      'any.required': 'Selling rate is required'
+    isDamaged: Joi.boolean().optional(),
+    damageReason: Joi.string().max(500).optional(),
+    damagedQuantity: Joi.number().min(0).optional()
+  }),
+  
+  return: Joi.object({
+    damageReason: Joi.string().max(500).required().messages({
+      'string.max': 'Damage reason cannot exceed 500 characters',
+      'any.required': 'Damage reason is required'
+    }),
+    damagedQuantity: Joi.number().integer().min(1).required().messages({
+      'number.min': 'Damaged quantity must be at least 1',
+      'any.required': 'Damaged quantity is required'
     })
   })
 };

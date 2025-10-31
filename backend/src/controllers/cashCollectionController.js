@@ -161,6 +161,27 @@ export const getDriverCashStats = async (req, res, next) => {
 };
 
 /**
+ * Update collection details (cheque, credit, bounce)
+ */
+export const updateCollectionDetails = async (req, res, next) => {
+  try {
+    const collection = await cashCollectionService.updateCollectionDetails(
+      req.params.id,
+      req.body,
+      req.user._id
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Collection details updated successfully',
+      data: collection
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * Delete cash collection
  */
 export const deleteCashCollection = async (req, res, next) => {
@@ -170,6 +191,66 @@ export const deleteCashCollection = async (req, res, next) => {
     res.status(200).json({
       success: true,
       message: result.message
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Cancel a bill/collection
+ */
+export const cancelBill = async (req, res, next) => {
+  try {
+    const { cancellationReason } = req.body;
+    
+    if (!cancellationReason || cancellationReason.trim() === '') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cancellation reason is required'
+      });
+    }
+
+    const collection = await cashCollectionService.cancelBill(
+      req.params.id,
+      req.user._id,
+      cancellationReason
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Bill cancelled successfully. Stock will be returned to inventory.',
+      data: collection
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get cancelled bills
+ */
+export const getCancelledBills = async (req, res, next) => {
+  try {
+    const filters = {
+      driverId: req.query.driverId,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+      page: parseInt(req.query.page) || 1,
+      limit: parseInt(req.query.limit) || 20
+    };
+
+    // If driver, only show their own cancelled bills
+    if (req.user.role === 'Driver') {
+      filters.driverId = req.user._id;
+    }
+
+    const result = await cashCollectionService.getCancelledBills(filters);
+
+    res.status(200).json({
+      success: true,
+      data: result.bills,
+      pagination: result.pagination
     });
   } catch (error) {
     next(error);

@@ -46,3 +46,13 @@ export const getStockStats = async (startDate, endDate) => {
   const response = await api.get(`/stock/stats?${params}`);
   return response.data.data || response.data;
 };
+
+export const returnDamagedStock = async (stockId, returnData) => {
+  const response = await api.patch(`/stock/${stockId}/return`, returnData);
+  return response.data.data || response.data;
+};
+
+export const getDamagedStock = async () => {
+  const response = await api.get('/stock/returns/list');
+  return response.data.data || response.data;
+};

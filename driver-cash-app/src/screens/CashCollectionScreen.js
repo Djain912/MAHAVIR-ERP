@@ -46,6 +46,13 @@ export default function CashCollectionScreen({ route, navigation }) {
   const [emptyBottlesReceived, setEmptyBottlesReceived] = useState('');
   const [coins, setCoins] = useState(''); // Single field for all coins (₹1, ₹2, ₹5)
   
+  // NEW FIELDS - Invoice, Outlet, Salesman, Expense
+  const [invoiceNumber, setInvoiceNumber] = useState('');
+  const [outletName, setOutletName] = useState('');
+  const [salesmanName, setSalesmanName] = useState('');
+  const [dailyExpenseAmount, setDailyExpenseAmount] = useState('');
+  const [expenseNotes, setExpenseNotes] = useState('');
+  
   const [expectedCash, setExpectedCash] = useState('');
   const [notes, setNotes] = useState('');
 
@@ -161,12 +168,19 @@ export default function CashCollectionScreen({ route, navigation }) {
         totalChequeReceived: parseFloat(totalChequeReceived || 0),
         totalOnlineReceived: parseFloat(totalOnlineReceived || 0),
         totalCreditGiven: parseFloat(totalCreditGiven || autoCredit),
-        // NEW FIELDS
+        // NEW FIELDS - Credit/Bounce Received
         creditReceivedCash: parseFloat(creditReceivedCash || 0),
         creditReceivedCheque: parseFloat(creditReceivedCheque || 0),
         bounceReceivedCash: parseFloat(bounceReceivedCash || 0),
         bounceReceivedCheque: parseFloat(bounceReceivedCheque || 0),
         emptyBottlesReceived: parseInt(emptyBottlesReceived || 0),
+        // NEW FIELDS - Invoice, Outlet, Salesman
+        invoiceNumber: invoiceNumber.trim(),
+        outletName: outletName.trim(),
+        salesmanName: salesmanName.trim() || user?.name || '', // Auto-fill with driver name if empty
+        // NEW FIELDS - Daily Expense
+        dailyExpenseAmount: parseFloat(dailyExpenseAmount || 0),
+        expenseNotes: expenseNotes.trim(),
         expectedCash: parseFloat(expectedCash),
         notes: notes.trim(),
       };
@@ -219,6 +233,85 @@ export default function CashCollectionScreen({ route, navigation }) {
           <Text style={styles.infoLabel}>Cash Given:</Text>
           <Text style={styles.infoValue}>₹{dispatch.totalCashValue?.toLocaleString() || '0'}</Text>
         </View>
+      </View>
+
+      {/* Bill Details Section - NEW */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>📄 Bill Details</Text>
+        <Text style={styles.subtitle}>Enter invoice and outlet information</Text>
+        
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Invoice Number</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter invoice/bill number"
+            value={invoiceNumber}
+            onChangeText={setInvoiceNumber}
+            maxLength={50}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Outlet Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter outlet/shop name"
+            value={outletName}
+            onChangeText={setOutletName}
+            maxLength={100}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Salesman Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder={user?.name || "Enter salesman name"}
+            value={salesmanName}
+            onChangeText={setSalesmanName}
+            maxLength={100}
+          />
+          <Text style={styles.helperText}>Auto-filled with your name. You can change it if needed.</Text>
+        </View>
+      </View>
+
+      {/* Daily Expense Section - NEW */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>💸 Daily Expense</Text>
+        <Text style={styles.subtitle}>Enter total expenses for the day (fuel, food, etc.)</Text>
+        
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Total Expense Amount</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="₹0"
+            keyboardType="numeric"
+            value={dailyExpenseAmount}
+            onChangeText={setDailyExpenseAmount}
+          />
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Expense Notes (Optional)</Text>
+          <TextInput
+            style={styles.textArea}
+            placeholder="Add expense details (e.g., Fuel ₹500, Food ₹200)"
+            multiline
+            numberOfLines={3}
+            value={expenseNotes}
+            onChangeText={setExpenseNotes}
+            maxLength={500}
+          />
+          <Text style={styles.charCount}>{expenseNotes.length}/500</Text>
+        </View>
+
+        {parseFloat(dailyExpenseAmount || 0) > 0 && (
+          <View style={styles.expenseHighlight}>
+            <Text style={styles.expenseHighlightText}>
+              Total Daily Expense: ₹{parseFloat(dailyExpenseAmount || 0).toLocaleString()}
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Cash Denominations */}
@@ -719,5 +812,24 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter',
+  },
+  helperText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  expenseHighlight: {
+    backgroundColor: '#FEF3C7',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 4,
+    borderLeftColor: '#F59E0B',
+    marginTop: 12,
+  },
+  expenseHighlightText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#92400E',
   },
 });

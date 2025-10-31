@@ -38,6 +38,11 @@ const productSchema = new mongoose.Schema({
   subSrNo: {
     type: Number
   },
+  code: {
+    type: String,
+    trim: true,
+    uppercase: true
+  },
   brandFullName: {
     type: String,
     trim: true

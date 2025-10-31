@@ -37,11 +37,6 @@ const stockInSchema = new mongoose.Schema({
     required: [true, 'Purchase rate is required'],
     min: [0, 'Purchase rate cannot be negative']
   },
-  sellingRate: {
-    type: Number,
-    required: [true, 'Selling rate is required'],
-    min: [0, 'Selling rate cannot be negative']
-  },
   ratePerUnit: {
     type: Number,
     min: [0, 'Rate cannot be negative']
@@ -51,6 +46,27 @@ const stockInSchema = new mongoose.Schema({
   },
   remainingQuantity: {
     type: Number
+  },
+  isDamaged: {
+    type: Boolean,
+    default: false
+  },
+  damageReason: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Damage reason cannot exceed 500 characters']
+  },
+  damagedQuantity: {
+    type: Number,
+    default: 0,
+    min: [0, 'Damaged quantity cannot be negative']
+  },
+  returnedAt: {
+    type: Date
+  },
+  returnedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Driver'
   },
   createdAt: {
     type: Date,

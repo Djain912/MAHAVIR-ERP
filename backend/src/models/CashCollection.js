@@ -53,6 +53,18 @@ const cashCollectionSchema = new mongoose.Schema({
     default: 0,
     min: [0, 'Cheque amount cannot be negative']
   },
+  // Cheque details
+  chequeNumber: {
+    type: String,
+    trim: true
+  },
+  bankName: {
+    type: String,
+    trim: true
+  },
+  chequeDate: {
+    type: Date
+  },
   totalOnlineReceived: {
     type: Number,
     default: 0,
@@ -62,6 +74,15 @@ const cashCollectionSchema = new mongoose.Schema({
     type: Number,
     default: 0,
     min: [0, 'Credit amount cannot be negative']
+  },
+  // Credit details
+  creditCustomerName: {
+    type: String,
+    trim: true
+  },
+  creditNotes: {
+    type: String,
+    maxlength: [500, 'Credit notes cannot exceed 500 characters']
   },
   totalReceived: {
     type: Number,
@@ -90,11 +111,70 @@ const cashCollectionSchema = new mongoose.Schema({
     default: 0,
     min: [0, 'Bounce received cheque cannot be negative']
   },
+  // Bounce details
+  bounceChequeNumber: {
+    type: String,
+    trim: true
+  },
+  bounceDate: {
+    type: Date
+  },
+  bounceReason: {
+    type: String,
+    maxlength: [500, 'Bounce reason cannot exceed 500 characters']
+  },
   // NEW FIELD - Empty Bottles
   emptyBottlesReceived: {
     type: Number,
     default: 0,
     min: [0, 'Empty bottles count cannot be negative']
+  },
+  bottlesNotes: {
+    type: String,
+    maxlength: [500, 'Bottles notes cannot exceed 500 characters']
+  },
+  // NEW FIELDS - Invoice and Outlet Details
+  invoiceNumber: {
+    type: String,
+    trim: true
+  },
+  outletName: {
+    type: String,
+    trim: true
+  },
+  salesmanName: {
+    type: String,
+    trim: true
+  },
+  // NEW FIELD - Daily Expense
+  dailyExpenseAmount: {
+    type: Number,
+    default: 0,
+    min: [0, 'Daily expense cannot be negative']
+  },
+  expenseNotes: {
+    type: String,
+    maxlength: [500, 'Expense notes cannot exceed 500 characters']
+  },
+  // NEW FIELD - Bill Cancellation
+  isCancelled: {
+    type: Boolean,
+    default: false
+  },
+  cancelledAt: {
+    type: Date
+  },
+  cancelledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  cancellationReason: {
+    type: String,
+    maxlength: [500, 'Cancellation reason cannot exceed 500 characters']
+  },
+  cancelledAmount: {
+    type: Number,
+    default: 0
   },
   expectedCash: {
     type: Number,

@@ -49,6 +49,24 @@ router.patch('/:id/reconcile',
   cashCollectionController.reconcileCashCollection
 );
 
+// Update collection details (cheque, credit, bounce) - Admin only
+router.patch('/:id/details',
+  authorize('Admin', 'Supervisor'),
+  cashCollectionController.updateCollectionDetails
+);
+
+// Cancel bill (Admin/Supervisor/Driver can cancel)
+router.patch('/:id/cancel',
+  authorize('Admin', 'Supervisor', 'Driver'),
+  cashCollectionController.cancelBill
+);
+
+// Get cancelled bills
+router.get('/cancelled/list',
+  authorize('Admin', 'Supervisor', 'Driver'),
+  cashCollectionController.getCancelledBills
+);
+
 // Delete cash collection (Admin only, only before verification)
 router.delete('/:id',
   authorize('Admin'),

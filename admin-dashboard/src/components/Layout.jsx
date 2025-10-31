@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaHome, FaBox, FaTruck, FaUsers, FaStore, FaCubes, FaChartBar, FaBars, FaTimes, FaSignOutAlt, FaMoneyBillWave, FaWarehouse, FaFilePdf, FaMoneyCheck, FaCalendarCheck, FaFileInvoiceDollar, FaReceipt, FaCashRegister } from 'react-icons/fa';
+import { FaHome, FaBox, FaTruck, FaUsers, FaStore, FaCubes, FaChartBar, FaBars, FaTimes, FaSignOutAlt, FaMoneyBillWave, FaWarehouse, FaFilePdf, FaMoneyCheck, FaCalendarCheck, FaFileInvoiceDollar, FaReceipt, FaCashRegister, FaClipboardList } from 'react-icons/fa';
 import { logout, getStoredUser } from '../services/authService';
 import { toast } from 'react-toastify';
 
@@ -17,13 +17,14 @@ const Layout = () => {
 
   const menuItems = [
     { path: '/', label: 'Dashboard', icon: FaHome },
-    { path: '/stock-intake', label: 'Stock Intake', icon: FaBox },
+    { path: '/stock-intake', label: 'Purchase', icon: FaBox },
     { path: '/dispatch', label: 'Driver Dispatch', icon: FaTruck },
     { path: '/users', label: 'User Management', icon: FaUsers },
     { path: '/retailers', label: 'Retailers', icon: FaStore },
     { path: '/wholesalers', label: 'Wholesalers', icon: FaWarehouse },
     { path: '/products', label: 'Products', icon: FaCubes },
     { path: '/cash-reconciliation', label: 'Cash Reconciliation', icon: FaMoneyBillWave },
+    { path: '/driver-collections', label: 'Driver Collections', icon: FaClipboardList },
     { path: '/cheques', label: 'Cheque Management', icon: FaMoneyCheck },
     { path: '/attendance', label: 'Attendance', icon: FaCalendarCheck },
     { path: '/salary', label: 'Salary (Old)', icon: FaFileInvoiceDollar },

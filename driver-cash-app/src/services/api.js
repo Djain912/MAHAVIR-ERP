@@ -45,10 +45,12 @@ api.interceptors.response.use(
     if (error.response) {
       console.error(`❌ ${error.config.method.toUpperCase()} ${error.config.url} - ${error.response.status}:`, error.response.data);
       
-      // Handle 401 unauthorized
+      // Handle 401 unauthorized - but don't clear token immediately
+      // Let the screen handle it so we can show proper error message
       if (error.response.status === 401) {
-        await AsyncStorage.removeItem('authToken');
-        await AsyncStorage.removeItem('userData');
+        console.warn('⚠️ Authentication failed. Token might be expired or invalid.');
+        // Don't auto-remove token here - let the component handle logout
+        // This prevents unexpected logouts during network issues
       }
     } else if (error.request) {
       console.error('❌ No response received:', error.message);

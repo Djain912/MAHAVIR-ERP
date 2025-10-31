@@ -35,6 +35,23 @@ export default function HomeScreen({ navigation }) {
           const dispatchData = await getActiveDispatch(userData._id);
           setActiveDispatch(dispatchData.data);
         } catch (error) {
+          // Check if it's an authentication error
+          if (error.response?.status === 401) {
+            Alert.alert(
+              'Session Expired',
+              'Your session has expired. Please login again.',
+              [
+                {
+                  text: 'Login',
+                  onPress: async () => {
+                    await logout();
+                    navigation.replace('Login');
+                  },
+                },
+              ]
+            );
+            return;
+          }
           console.log('No active dispatch found');
           setActiveDispatch(null);
         }
@@ -42,9 +59,28 @@ export default function HomeScreen({ navigation }) {
         // Fetch driver stats
         try {
           const statsData = await getDriverStats(userData._id);
+          console.log('📊 Stats API Response:', JSON.stringify(statsData, null, 2));
+          console.log('📊 Stats Data:', JSON.stringify(statsData.data, null, 2));
           setStats(statsData.data);
         } catch (error) {
-          console.log('Error loading stats');
+          // Check if it's an authentication error
+          if (error.response?.status === 401) {
+            Alert.alert(
+              'Session Expired',
+              'Your session has expired. Please login again.',
+              [
+                {
+                  text: 'Login',
+                  onPress: async () => {
+                    await logout();
+                    navigation.replace('Login');
+                  },
+                },
+              ]
+            );
+            return;
+          }
+          console.log('Error loading stats:', error);
         }
       }
     } catch (error) {

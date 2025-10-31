@@ -29,6 +29,7 @@ import SalaryManagement from './pages/SalaryManagement';
 import SalaryManagementNew from './pages/SalaryManagementNew';
 import ExpenseTracking from './pages/ExpenseTracking';
 import CounterSales from './pages/CounterSales';
+import DriverCollectionsManagement from './pages/DriverCollectionsManagement';
 
 // Layout
 import Layout from './components/Layout';
@@ -70,6 +71,7 @@ function App() {
           <Route path="salary-new" element={<SalaryManagementNew />} />
           <Route path="expenses" element={<ExpenseTracking />} />
           <Route path="counter-sales" element={<CounterSales />} />
+          <Route path="driver-collections" element={<DriverCollectionsManagement />} />
           <Route path="reports" element={<Reports />} />
         </Route>
         

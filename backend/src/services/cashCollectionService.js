@@ -20,6 +20,12 @@ export const submitCashCollection = async (collectionData) => {
     bounceReceivedCash,
     bounceReceivedCheque,
     emptyBottlesReceived,
+    // NEW FIELDS
+    invoiceNumber,
+    outletName,
+    salesmanName,
+    dailyExpenseAmount,
+    expenseNotes,
     expectedCash, 
     notes 
   } = collectionData;
@@ -84,6 +90,12 @@ export const submitCashCollection = async (collectionData) => {
     bounceReceivedCash: bounceReceivedCash || 0,
     bounceReceivedCheque: bounceReceivedCheque || 0,
     emptyBottlesReceived: emptyBottlesReceived || 0,
+    // NEW FIELDS
+    invoiceNumber: invoiceNumber || '',
+    outletName: outletName || '',
+    salesmanName: salesmanName || '',
+    dailyExpenseAmount: dailyExpenseAmount || 0,
+    expenseNotes: expenseNotes || '',
     expectedCash,
     previousVariance,
     notes,
@@ -281,6 +293,8 @@ export const getDriverCashStats = async (driverId, startDate, endDate) => {
 
   const collections = await CashCollection.find(query).sort({ collectionDate: -1, createdAt: -1 });
 
+  console.log(`📊 Getting stats for driver ${driverId}, found ${collections.length} collections`);
+
   const stats = {
     totalCollections: collections.length,
     totalCashCollected: 0,
@@ -295,6 +309,14 @@ export const getDriverCashStats = async (driverId, startDate, endDate) => {
   // Get the latest cumulative variance (from most recent collection)
   if (collections.length > 0) {
     stats.cumulativeVariance = collections[0].cumulativeVariance || 0;
+    console.log(`📊 Latest collection cumulative variance: ${stats.cumulativeVariance}`);
+    console.log(`📊 Latest collection data:`, {
+      id: collections[0]._id,
+      date: collections[0].collectionDate,
+      variance: collections[0].variance,
+      previousVariance: collections[0].previousVariance,
+      cumulativeVariance: collections[0].cumulativeVariance
+    });
   }
 
   collections.forEach(collection => {
@@ -307,7 +329,67 @@ export const getDriverCashStats = async (driverId, startDate, endDate) => {
     if (collection.status === 'Reconciled') stats.reconciled++;
   });
 
+  console.log(`📊 Returning stats:`, stats);
   return stats;
+};
+
+/**
+ * Update collection details (cheque, credit, bounce)
+ */
+export const updateCollectionDetails = async (collectionId, details, updatedBy) => {
+  const collection = await CashCollection.findById(collectionId);
+
+  if (!collection) {
+    throw new Error('Cash collection not found');
+  }
+
+  // Update fields based on what's provided
+  const updateData = {};
+
+  // Cheque details
+  if (details.chequeDetails) {
+    updateData.chequeNumber = details.chequeDetails.chequeNumber;
+    updateData.bankName = details.chequeDetails.bankName;
+    updateData.chequeDate = details.chequeDetails.chequeDate;
+  }
+
+  // Credit details
+  if (details.creditDetails) {
+    updateData.creditCustomerName = details.creditDetails.customerName;
+    updateData.creditNotes = details.creditDetails.notes;
+    if (details.creditDetails.amount !== undefined) {
+      updateData.totalCreditGiven = details.creditDetails.amount;
+    }
+  }
+
+  // Bounce details
+  if (details.bounceDetails) {
+    updateData.bounceChequeNumber = details.bounceDetails.chequeNumber;
+    updateData.bounceDate = details.bounceDetails.bounceDate;
+    updateData.bounceReason = details.bounceDetails.reason;
+  }
+
+  // Bottles details
+  if (details.bottlesDetails) {
+    updateData.emptyBottlesReceived = details.bottlesDetails.count;
+    updateData.bottlesNotes = details.bottlesDetails.notes;
+  }
+
+  // General notes
+  if (details.notes !== undefined) {
+    updateData.notes = details.notes;
+  }
+
+  // Update the collection
+  const updatedCollection = await CashCollection.findByIdAndUpdate(
+    collectionId,
+    { ...updateData, updatedBy, updatedAt: new Date() },
+    { new: true, runValidators: true }
+  )
+    .populate('driverId', 'name phone')
+    .populate('dispatchId');
+
+  return updatedCollection;
 };
 
 /**
@@ -327,4 +409,96 @@ export const deleteCashCollection = async (collectionId) => {
   await CashCollection.findByIdAndDelete(collectionId);
 
   return { message: 'Cash collection deleted successfully' };
+};
+
+/**
+ * Cancel a bill/collection (marks as cancelled, returns stock to inventory)
+ */
+export const cancelBill = async (collectionId, cancelledBy, cancellationReason) => {
+  const collection = await CashCollection.findById(collectionId)
+    .populate('dispatchId')
+    .populate('driverId', 'name phone');
+
+  if (!collection) {
+    throw new Error('Cash collection not found');
+  }
+
+  if (collection.isCancelled) {
+    throw new Error('Bill is already cancelled');
+  }
+
+  // Only allow cancellation if not reconciled
+  if (collection.status === 'Reconciled') {
+    throw new Error('Cannot cancel reconciled bills. Please contact admin.');
+  }
+
+  // Calculate the amount that was collected in this bill
+  const cancelledAmount = collection.totalReceived || 0;
+
+  // Mark collection as cancelled
+  collection.isCancelled = true;
+  collection.cancelledAt = new Date();
+  collection.cancelledBy = cancelledBy;
+  collection.cancellationReason = cancellationReason;
+  collection.cancelledAmount = cancelledAmount;
+  collection.status = 'Submitted'; // Keep as submitted but marked cancelled
+
+  await collection.save();
+
+  // TODO: Return stock to inventory (future implementation)
+  // This would involve:
+  // 1. Getting the products from the dispatch
+  // 2. Adding them back to stock intake inventory
+  // 3. Updating warehouse inventory
+
+  return await CashCollection.findById(collectionId)
+    .populate('driverId', 'name phone')
+    .populate('dispatchId')
+    .populate('cancelledBy', 'name');
+};
+
+/**
+ * Get cancelled bills
+ */
+export const getCancelledBills = async (filters = {}) => {
+  const { driverId, startDate, endDate, page = 1, limit = 20 } = filters;
+
+  const query = { isCancelled: true };
+
+  if (driverId) {
+    query.driverId = driverId;
+  }
+
+  if (startDate || endDate) {
+    query.cancelledAt = {};
+    if (startDate) {
+      query.cancelledAt.$gte = new Date(startDate);
+    }
+    if (endDate) {
+      query.cancelledAt.$lte = new Date(endDate);
+    }
+  }
+
+  const skip = (page - 1) * limit;
+
+  const [bills, total] = await Promise.all([
+    CashCollection.find(query)
+      .populate('driverId', 'name phone')
+      .populate('dispatchId')
+      .populate('cancelledBy', 'name')
+      .sort({ cancelledAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    CashCollection.countDocuments(query)
+  ]);
+
+  return {
+    bills,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit)
+    }
+  };
 };

@@ -70,10 +70,24 @@ router.post('/', authorize('Admin', 'Supervisor'), normalizeStockData, validate(
 router.get('/', authorize('Admin', 'Supervisor'), stockController.getAllStockIn);
 
 /**
+ * @route   GET /api/stock/returns/list
+ * @desc    Get all damaged/returned stock
+ * @access  Private (Admin, Supervisor)
+ */
+router.get('/returns/list', authorize('Admin', 'Supervisor'), stockController.getDamagedStock);
+
+/**
  * @route   GET /api/stock/:id
  * @desc    Get stock intake by ID
  * @access  Private (Admin, Supervisor)
  */
 router.get('/:id', authorize('Admin', 'Supervisor'), validateObjectId(), stockController.getStockInById);
+
+/**
+ * @route   PATCH /api/stock/:id/return
+ * @desc    Mark stock as damaged/returned
+ * @access  Private (Admin, Supervisor)
+ */
+router.patch('/:id/return', authorize('Admin', 'Supervisor'), validateObjectId(), validate(stockValidation.return), stockController.returnDamagedStock);
 
 export default router;

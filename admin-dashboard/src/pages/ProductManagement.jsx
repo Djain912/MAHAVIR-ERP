@@ -1,6 +1,6 @@
 /**
  * Product Management Page
- * Full CRUD for managing Coca-Cola products
+ * Full CRUD for managing Coca-Cola products with complete schema
  */
 
 import React, { useState, useEffect } from 'react';
@@ -16,13 +16,26 @@ const ProductManagement = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [deletingProduct, setDeletingProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filterBrand, setFilterBrand] = useState('');
+  const [filterType, setFilterType] = useState('');
   const [showInactive, setShowInactive] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    size: '',
-    pricePerUnit: ''
+    headBrand: '',
+    serialNumber: '',
+    brandName: '',
+    subSrNo: '',
+    code: '',
+    brandFullName: '',
+    ml: '',
+    type: '',
+    brand: '',
+    mrp: '',
+    packSize: '',
+    purchaseRate: ''
   });
   const [errors, setErrors] = useState({});
 
@@ -36,14 +49,13 @@ const ProductManagement = () => {
       console.log('📦 Loading products...');
       const data = await productService.getAllProducts(!showInactive);
       console.log('📦 Products data received:', data);
-      console.log('📦 Is array?', Array.isArray(data));
-      console.log('📦 data.data exists?', data?.data);
       
-      // Handle nested response structure: response.data might contain { success, message, data: [...] }
+      // Handle nested response structure
       const productsArray = data?.data || data;
       console.log('📦 Extracted products array:', productsArray);
       
       setProducts(Array.isArray(productsArray) ? productsArray : []);
+      toast.success(`Loaded ${Array.isArray(productsArray) ? productsArray.length : 0} products`);
     } catch (error) {
       toast.error('Failed to load products');
       console.error('❌ Error loading products:', error);
@@ -52,6 +64,10 @@ const ProductManagement = () => {
       setLoading(false);
     }
   };
+
+  // Get unique brands and types for filters
+  const brands = [...new Set(products.map(p => p.brand).filter(Boolean))].sort();
+  const types = [...new Set(products.map(p => p.type).filter(Boolean))].sort();
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -64,18 +80,18 @@ const ProductManagement = () => {
   const validateForm = () => {
     const newErrors = {};
     
-    if (!formData.name.trim()) {
-      newErrors.name = 'Product name is required';
+    if (!formData.brandName.trim()) {
+      newErrors.brandName = 'Brand name is required';
     }
     
-    if (!formData.size.trim()) {
-      newErrors.size = 'Size is required';
+    if (!formData.brandFullName.trim()) {
+      newErrors.brandFullName = 'Full brand name is required';
     }
     
-    if (!formData.pricePerUnit) {
-      newErrors.pricePerUnit = 'Price is required';
-    } else if (isNaN(formData.pricePerUnit) || parseFloat(formData.pricePerUnit) < 0) {
-      newErrors.pricePerUnit = 'Price must be a positive number';
+    if (!formData.mrp) {
+      newErrors.mrp = 'MRP is required';
+    } else if (isNaN(formData.mrp) || parseFloat(formData.mrp) < 0) {
+      newErrors.mrp = 'MRP must be a positive number';
     }
     
     setErrors(newErrors);
@@ -93,9 +109,18 @@ const ProductManagement = () => {
     setLoading(true);
     try {
       const productData = {
-        name: formData.name.trim(),
-        size: formData.size.trim(),
-        pricePerUnit: parseFloat(formData.pricePerUnit)
+        headBrand: formData.headBrand.trim(),
+        serialNumber: formData.serialNumber.trim(),
+        brandName: formData.brandName.trim(),
+        subSrNo: formData.subSrNo.trim(),
+        code: formData.code.trim().toUpperCase(),
+        brandFullName: formData.brandFullName.trim(),
+        ml: formData.ml.trim(),
+        type: formData.type.trim(),
+        brand: formData.brand.trim(),
+        mrp: parseFloat(formData.mrp),
+        packSize: formData.packSize ? parseInt(formData.packSize) : undefined,
+        purchaseRate: formData.purchaseRate ? parseFloat(formData.purchaseRate) : undefined
       };
       
       if (editingProduct) {
@@ -120,26 +145,43 @@ const ProductManagement = () => {
   const handleEdit = (product) => {
     setEditingProduct(product);
     setFormData({
-      name: product.name,
-      size: product.size,
-      pricePerUnit: product.pricePerUnit.toString()
+      headBrand: product.headBrand || '',
+      serialNumber: product.serialNumber || '',
+      brandName: product.brandName || '',
+      subSrNo: product.subSrNo || '',
+      code: product.code || '',
+      brandFullName: product.brandFullName || '',
+      ml: product.ml || '',
+      type: product.type || '',
+      brand: product.brand || '',
+      mrp: product.mrp?.toString() || '',
+      packSize: product.packSize?.toString() || '',
+      purchaseRate: product.purchaseRate?.toString() || ''
     });
     setShowModal(true);
   };
 
-  const handleDelete = async (productId) => {
-    if (!window.confirm('Are you sure you want to deactivate this product?')) {
-      return;
-    }
+  const handleDelete = async () => {
+    if (!deletingProduct) return;
     
+    setLoading(true);
     try {
-      await productService.deleteProduct(productId);
-      toast.success('Product deactivated successfully!');
+      await productService.deleteProduct(deletingProduct._id);
+      toast.success('Product deleted successfully!');
+      setShowDeleteModal(false);
+      setDeletingProduct(null);
       loadProducts();
     } catch (error) {
-      toast.error('Failed to deactivate product');
+      toast.error('Failed to delete product');
       console.error('Error deleting product:', error);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const openDeleteModal = (product) => {
+    setDeletingProduct(product);
+    setShowDeleteModal(true);
   };
 
   const handleToggleActive = async (product) => {
@@ -155,9 +197,18 @@ const ProductManagement = () => {
 
   const resetForm = () => {
     setFormData({
-      name: '',
-      size: '',
-      pricePerUnit: ''
+      headBrand: '',
+      serialNumber: '',
+      brandName: '',
+      subSrNo: '',
+      code: '',
+      brandFullName: '',
+      ml: '',
+      type: '',
+      brand: '',
+      mrp: '',
+      packSize: '',
+      purchaseRate: ''
     });
     setEditingProduct(null);
     setErrors({});
@@ -165,11 +216,17 @@ const ProductManagement = () => {
 
   const filteredProducts = products.filter(product => {
     const searchLower = searchTerm.toLowerCase();
-    return (
-      product.name.toLowerCase().includes(searchLower) ||
-      product.size.toLowerCase().includes(searchLower) ||
-      product.pricePerUnit.toString().includes(searchTerm)
-    );
+    const matchesSearch = !searchTerm || 
+      product.brandFullName?.toLowerCase().includes(searchLower) ||
+      product.code?.toLowerCase().includes(searchLower) ||
+      product.brandName?.toLowerCase().includes(searchLower) ||
+      product.brand?.toLowerCase().includes(searchLower);
+    
+    const matchesBrand = !filterBrand || product.brand === filterBrand;
+    const matchesType = !filterType || product.type === filterType;
+    const matchesActive = showInactive || product.active !== false;
+    
+    return matchesSearch && matchesBrand && matchesType && matchesActive;
   });
 
   const stats = [
@@ -182,26 +239,26 @@ const ProductManagement = () => {
     },
     {
       label: 'Active Products',
-      count: products.filter(p => p.active).length,
+      count: products.filter(p => p.active !== false).length,
       icon: FaCheckCircle,
       bgColor: 'bg-green-100',
       textColor: 'text-green-600'
     },
     {
-      label: 'Inactive Products',
-      count: products.filter(p => !p.active).length,
-      icon: FaTimesCircle,
-      bgColor: 'bg-red-100',
-      textColor: 'text-red-600'
-    },
-    {
-      label: 'Avg Price',
-      count: products.length > 0 
-        ? `₹${(products.reduce((sum, p) => sum + p.pricePerUnit, 0) / products.length).toFixed(2)}`
-        : '₹0',
-      icon: FaRupeeSign,
+      label: 'Brands',
+      count: brands.length,
+      icon: FaBoxes,
       bgColor: 'bg-purple-100',
       textColor: 'text-purple-600'
+    },
+    {
+      label: 'Avg MRP',
+      count: products.length > 0 
+        ? `₹${(products.reduce((sum, p) => sum + (p.mrp || 0), 0) / products.length).toFixed(2)}`
+        : '₹0',
+      icon: FaRupeeSign,
+      bgColor: 'bg-green-100',
+      textColor: 'text-green-600'
     }
   ];
 
@@ -244,14 +301,40 @@ const ProductManagement = () => {
 
       {/* Filters */}
       <Card>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <Input
             label="Search"
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search by name, size, or price..."
+            placeholder="Search by code, name, brand..."
           />
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Brand</label>
+            <select
+              value={filterBrand}
+              onChange={(e) => setFilterBrand(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Brands</option>
+              {brands.map(brand => (
+                <option key={brand} value={brand}>{brand}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+            <select
+              value={filterType}
+              onChange={(e) => setFilterType(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All Types</option>
+              {types.map(type => (
+                <option key={type} value={type}>{type}</option>
+              ))}
+            </select>
+          </div>
           <div className="flex items-end">
             <label className="flex items-center cursor-pointer">
               <input
@@ -260,9 +343,12 @@ const ProductManagement = () => {
                 onChange={(e) => setShowInactive(e.target.checked)}
                 className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
-              <span className="text-sm font-medium text-gray-700">Show Inactive Products</span>
+              <span className="text-sm font-medium text-gray-700">Show Inactive</span>
             </label>
           </div>
+        </div>
+        <div className="mt-4 text-sm text-gray-600">
+          Showing {filteredProducts.length} of {products.length} products
         </div>
       </Card>
 
@@ -272,19 +358,31 @@ const ProductManagement = () => {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Product Name
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Code
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Size
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Brand Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Price per Unit
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Full Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  ML
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Type
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Brand
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  MRP
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Pack Size
+                </th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
@@ -292,48 +390,48 @@ const ProductManagement = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan="9" className="px-6 py-4 text-center text-gray-500">
                     Loading products...
                   </td>
                 </tr>
               ) : filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan="9" className="px-6 py-4 text-center text-gray-500">
                     No products found
                   </td>
                 </tr>
               ) : (
                 filteredProducts.map((product) => (
                   <tr key={product._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <FaBoxes className="h-5 w-5 text-gray-400 mr-2" />
-                        <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                      </div>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{product.code || '-'}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-500">{product.size}</div>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm text-gray-700">{product.brandName}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                    <td className="px-4 py-3 text-sm text-gray-700 max-w-md">
+                      {product.brandFullName}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm text-gray-700">{product.ml}</div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm text-gray-700">{product.type}</div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm text-gray-700">{product.brand}</div>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center text-sm font-semibold text-gray-900">
-                        <FaRupeeSign className="h-4 w-4 mr-1" />
-                        {product.pricePerUnit.toFixed(2)}
+                        <FaRupeeSign className="h-3 w-3 mr-1" />
+                        {product.mrp}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => handleToggleActive(product)}
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer hover:opacity-80 ${
-                          product.active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {product.active ? 'Active' : 'Inactive'}
-                      </button>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <div className="text-sm text-gray-700">{product.packSize}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-3">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium">
+                      <div className="flex space-x-2">
                         <button
                           onClick={() => handleEdit(product)}
                           className="text-blue-600 hover:text-blue-900"
@@ -342,9 +440,9 @@ const ProductManagement = () => {
                           <FaEdit />
                         </button>
                         <button
-                          onClick={() => handleDelete(product._id)}
+                          onClick={() => openDeleteModal(product)}
                           className="text-red-600 hover:text-red-900"
-                          title="Deactivate product"
+                          title="Delete product"
                         >
                           <FaTrash />
                         </button>
@@ -366,39 +464,125 @@ const ProductManagement = () => {
           resetForm();
         }}
         title={editingProduct ? 'Edit Product' : 'Add New Product'}
-        size="md"
+        size="xl"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Product Name *"
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleInputChange}
-            error={errors.name}
-            placeholder="e.g., Coca-Cola, Sprite, Fanta"
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Head Brand"
+              type="text"
+              name="headBrand"
+              value={formData.headBrand}
+              onChange={handleInputChange}
+              placeholder="e.g., Coca Cola"
+            />
+            
+            <Input
+              label="Serial Number"
+              type="text"
+              name="serialNumber"
+              value={formData.serialNumber}
+              onChange={handleInputChange}
+              placeholder="e.g., 1"
+            />
+            
+            <Input
+              label="Brand Name *"
+              type="text"
+              name="brandName"
+              value={formData.brandName}
+              onChange={handleInputChange}
+              error={errors.brandName}
+              placeholder="e.g., Coca Cola"
+            />
+            
+            <Input
+              label="Sub Sr No"
+              type="text"
+              name="subSrNo"
+              value={formData.subSrNo}
+              onChange={handleInputChange}
+              placeholder="e.g., 1"
+            />
+            
+            <Input
+              label="Product Code"
+              type="text"
+              name="code"
+              value={formData.code}
+              onChange={handleInputChange}
+              placeholder="e.g., KOC200/KOC200P"
+            />
+            
+            <Input
+              label="ML"
+              type="text"
+              name="ml"
+              value={formData.ml}
+              onChange={handleInputChange}
+              placeholder="e.g., 200ml"
+            />
+            
+            <Input
+              label="Type"
+              type="text"
+              name="type"
+              value={formData.type}
+              onChange={handleInputChange}
+              placeholder="e.g., RGB, PET, Can"
+            />
+            
+            <Input
+              label="Brand"
+              type="text"
+              name="brand"
+              value={formData.brand}
+              onChange={handleInputChange}
+              placeholder="e.g., Coca Cola"
+            />
+            
+            <Input
+              label="MRP (₹) *"
+              type="number"
+              name="mrp"
+              value={formData.mrp}
+              onChange={handleInputChange}
+              error={errors.mrp}
+              placeholder="Enter MRP"
+              step="0.01"
+              min="0"
+            />
+            
+            <Input
+              label="Pack Size"
+              type="number"
+              name="packSize"
+              value={formData.packSize}
+              onChange={handleInputChange}
+              placeholder="e.g., 24"
+              min="1"
+            />
+            
+            <Input
+              label="Purchase Rate (₹)"
+              type="number"
+              name="purchaseRate"
+              value={formData.purchaseRate}
+              onChange={handleInputChange}
+              placeholder="Enter purchase rate"
+              step="0.01"
+              min="0"
+            />
+          </div>
           
           <Input
-            label="Size *"
+            label="Brand Full Name *"
             type="text"
-            name="size"
-            value={formData.size}
+            name="brandFullName"
+            value={formData.brandFullName}
             onChange={handleInputChange}
-            error={errors.size}
-            placeholder="e.g., 250ml, 500ml, 1L, 2L"
-          />
-          
-          <Input
-            label="Price per Unit (₹) *"
-            type="number"
-            name="pricePerUnit"
-            value={formData.pricePerUnit}
-            onChange={handleInputChange}
-            error={errors.pricePerUnit}
-            placeholder="Enter price"
-            step="0.01"
-            min="0"
+            error={errors.brandFullName}
+            placeholder="e.g., 200ML RGB Coca Cola RS. 10 (Pack of 24)"
           />
           
           <div className="flex justify-end space-x-3 mt-6">
@@ -421,6 +605,44 @@ const ProductManagement = () => {
             </Button>
           </div>
         </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setDeletingProduct(null);
+        }}
+        title="Confirm Delete"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-gray-600">Are you sure you want to delete this product?</p>
+          {deletingProduct && (
+            <p className="text-gray-800 font-medium">{deletingProduct.brandFullName}</p>
+          )}
+          <div className="flex justify-end space-x-3 mt-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setShowDeleteModal(false);
+                setDeletingProduct(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="danger"
+              onClick={handleDelete}
+              disabled={loading}
+            >
+              {loading ? 'Deleting...' : 'Delete'}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );

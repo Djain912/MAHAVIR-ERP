@@ -26,9 +26,17 @@ const StockIntake = () => {
     quantity: '',
     batchNumber: '',
     expiryDate: '',
-    purchaseRate: '',
-    sellingRate: ''
+    purchaseRate: ''
   });
+
+  // Purchase return state
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [selectedStock, setSelectedStock] = useState(null);
+  const [returnData, setReturnData] = useState({
+    damageReason: '',
+    damagedQuantity: ''
+  });
+  const [damagedStockList, setDamagedStockList] = useState([]);
 
   const [errors, setErrors] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
@@ -41,6 +49,7 @@ const StockIntake = () => {
     loadProducts();
     loadStockList();
     loadStockSummary();
+    loadDamagedStock();
   }, []);
 
   // Close dropdown when clicking outside
@@ -85,6 +94,16 @@ const StockIntake = () => {
     } catch (error) {
       console.error('Failed to load stock summary:', error);
       setStockSummary([]);
+    }
+  };
+
+  const loadDamagedStock = async () => {
+    try {
+      const data = await stockService.getDamagedStock();
+      setDamagedStockList(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Failed to load damaged stock:', error);
+      setDamagedStockList([]);
     }
   };
 
@@ -158,7 +177,6 @@ const StockIntake = () => {
     if (!formData.batchNumber) newErrors.batchNumber = 'Batch number is required';
     if (!formData.expiryDate) newErrors.expiryDate = 'Expiry date is required';
     if (!formData.purchaseRate || formData.purchaseRate <= 0) newErrors.purchaseRate = 'Valid purchase rate is required';
-    if (!formData.sellingRate || formData.sellingRate <= 0) newErrors.sellingRate = 'Valid selling rate is required';
 
     // Check if expiry date is in the future
     if (formData.expiryDate && new Date(formData.expiryDate) <= new Date()) {
@@ -184,11 +202,10 @@ const StockIntake = () => {
         quantity: parseInt(formData.quantity),
         batchNumber: formData.batchNumber,
         expiryDate: formData.expiryDate,
-        purchaseRate: parseFloat(formData.purchaseRate),
-        sellingRate: parseFloat(formData.sellingRate)
+        purchaseRate: parseFloat(formData.purchaseRate)
       });
 
-      toast.success('Stock added successfully!');
+      toast.success('Purchase recorded successfully!');
       
       // Reset form
       setFormData({
@@ -196,8 +213,7 @@ const StockIntake = () => {
         quantity: '',
         batchNumber: '',
         expiryDate: '',
-        purchaseRate: '',
-        sellingRate: ''
+        purchaseRate: ''
       });
       setSearchTerm('');
       setSelectedProduct(null);
@@ -221,16 +237,68 @@ const StockIntake = () => {
     return available < threshold;
   };
 
+  const handleReturnClick = (stock) => {
+    setSelectedStock(stock);
+    setReturnData({
+      damageReason: '',
+      damagedQuantity: ''
+    });
+    setShowReturnModal(true);
+  };
+
+  const handleReturnSubmit = async () => {
+    if (!returnData.damageReason || !returnData.damagedQuantity) {
+      toast.error('Please provide damage reason and quantity');
+      return;
+    }
+
+    if (parseInt(returnData.damagedQuantity) > selectedStock.remainingQuantity) {
+      toast.error(`Cannot return ${returnData.damagedQuantity} units. Only ${selectedStock.remainingQuantity} available`);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await stockService.returnDamagedStock(selectedStock._id, {
+        damageReason: returnData.damageReason,
+        damagedQuantity: parseInt(returnData.damagedQuantity)
+      });
+
+      toast.success('Purchase return recorded successfully!');
+      setShowReturnModal(false);
+      setSelectedStock(null);
+      
+      // Reload data
+      loadStockList();
+      loadStockSummary();
+      loadDamagedStock();
+    } catch (error) {
+      toast.error(error.message || 'Failed to record purchase return');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Calculate profit for a product based on selling rate from Product model
+  const calculateProfit = (stock) => {
+    if (!stock.product || !stock.product.pricePerUnit) return null;
+    const sellingRate = stock.product.pricePerUnit;
+    const purchaseRate = stock.purchaseRate;
+    const profit = sellingRate - purchaseRate;
+    const profitPercent = ((profit / purchaseRate) * 100).toFixed(2);
+    return { profit, profitPercent };
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold text-gray-900">Stock Intake</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Purchase Management</h1>
         <Button
           variant="primary"
           icon={showForm ? null : FaPlus}
           onClick={() => setShowForm(!showForm)}
         >
-          {showForm ? 'Cancel' : 'Add New Stock'}
+          {showForm ? 'Cancel' : 'Add New Purchase'}
         </Button>
       </div>
 
@@ -275,9 +343,9 @@ const StockIntake = () => {
         </Card>
       </div>
 
-      {/* Add Stock Form */}
+      {/* Add Purchase Form */}
       {showForm && (
-        <Card title="Add New Stock">
+        <Card title="Add New Purchase">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Searchable Product Dropdown */}
@@ -378,19 +446,30 @@ const StockIntake = () => {
                 step="0.01"
                 min="0"
               />
-
-              <Input
-                label="Selling Rate (₹) *"
-                type="number"
-                name="sellingRate"
-                value={formData.sellingRate}
-                onChange={handleInputChange}
-                error={errors.sellingRate}
-                placeholder="0.00"
-                step="0.01"
-                min="0"
-              />
             </div>
+
+            {selectedProduct && selectedProduct.pricePerUnit && formData.purchaseRate && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <h4 className="font-semibold text-green-900 mb-2">📊 Profit Analysis</h4>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-600">Purchase Rate</p>
+                    <p className="font-bold text-gray-900">₹{parseFloat(formData.purchaseRate).toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">Selling Rate</p>
+                    <p className="font-bold text-gray-900">₹{selectedProduct.pricePerUnit.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">Profit per Unit</p>
+                    <p className="font-bold text-green-600">
+                      ₹{(selectedProduct.pricePerUnit - parseFloat(formData.purchaseRate)).toFixed(2)} 
+                      ({(((selectedProduct.pricePerUnit - parseFloat(formData.purchaseRate)) / parseFloat(formData.purchaseRate)) * 100).toFixed(2)}%)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex justify-end space-x-3">
               <Button
@@ -405,7 +484,7 @@ const StockIntake = () => {
                 variant="primary"
                 disabled={loading}
               >
-                {loading ? 'Adding...' : 'Add Stock'}
+                {loading ? 'Recording...' : 'Record Purchase'}
               </Button>
             </div>
           </form>
@@ -471,8 +550,8 @@ const StockIntake = () => {
         </div>
       </Card>
 
-      {/* Stock Intake History */}
-      <Card title="Stock Intake History">
+      {/* Purchase History */}
+      <Card title="Purchase History">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -493,23 +572,129 @@ const StockIntake = () => {
                   Expiry Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Rates (₹)
+                  Purchase Rate
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Profit/Unit
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date Added
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {stockList.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="px-6 py-4 text-center text-gray-500">
-                    No stock intake records found
+                  <td colSpan="9" className="px-6 py-4 text-center text-gray-500">
+                    No purchase records found
                   </td>
                 </tr>
               ) : (
-                stockList.map((stock) => (
-                  <tr key={stock._id}>
+                stockList.map((stock) => {
+                  const profitData = calculateProfit(stock);
+                  return (
+                    <tr key={stock._id} className={stock.isDamaged ? 'bg-red-50' : ''}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {stock.product?.name || 'Unknown'}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {stock.product?.size || '-'}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {stock.batchNumber}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {stock.quantity}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                        {stock.remainingQuantity}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(stock.expiryDate)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ₹{stock.purchaseRate}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {profitData ? (
+                          <div>
+                            <div className="font-semibold text-green-600">
+                              ₹{profitData.profit.toFixed(2)}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              ({profitData.profitPercent}%)
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {formatDate(stock.createdAt)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        {!stock.isDamaged && stock.remainingQuantity > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleReturnClick(stock)}
+                          >
+                            Return
+                          </Button>
+                        )}
+                        {stock.isDamaged && (
+                          <span className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded">
+                            Returned
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* Purchase Returns */}
+      {damagedStockList.length > 0 && (
+        <Card title="Purchase Returns (Damaged Goods)">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Product
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Batch Number
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Damaged Qty
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Reason
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Loss Amount
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Returned By
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Return Date
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {damagedStockList.map((stock) => (
+                  <tr key={stock._id} className="bg-red-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         {stock.product?.name || 'Unknown'}
@@ -521,29 +706,103 @@ const StockIntake = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {stock.batchNumber}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {stock.quantity}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-600">
+                      {stock.damagedQuantity} units
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                      {stock.remainingQuantity}
+                    <td className="px-6 py-4 text-sm text-gray-700">
+                      {stock.damageReason}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(stock.expiryDate)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div>P: ₹{stock.purchaseRate}</div>
-                      <div>S: ₹{stock.sellingRate}</div>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-600">
+                      ₹{(stock.damagedQuantity * stock.purchaseRate).toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(stock.createdAt)}
+                      {stock.returnedBy?.name || 'Unknown'}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatDate(stock.returnedAt)}
                     </td>
                   </tr>
-                ))
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
+
+      {/* Return Modal */}
+      {showReturnModal && selectedStock && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              Record Purchase Return
+            </h3>
+            
+            <div className="mb-4 p-3 bg-gray-50 rounded">
+              <p className="text-sm text-gray-600">Product</p>
+              <p className="font-semibold">{selectedStock.product?.name} - {selectedStock.product?.size}</p>
+              <p className="text-sm text-gray-600 mt-2">Available Quantity</p>
+              <p className="font-semibold">{selectedStock.remainingQuantity} units</p>
+            </div>
+
+            <div className="space-y-4">
+              <Input
+                label="Damaged Quantity *"
+                type="number"
+                value={returnData.damagedQuantity}
+                onChange={(e) => setReturnData(prev => ({ ...prev, damagedQuantity: e.target.value }))}
+                placeholder="Enter quantity"
+                min="1"
+                max={selectedStock.remainingQuantity}
+              />
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Damage Reason *
+                </label>
+                <textarea
+                  value={returnData.damageReason}
+                  onChange={(e) => setReturnData(prev => ({ ...prev, damageReason: e.target.value }))}
+                  placeholder="e.g., Broken bottles, Expired, Quality issues..."
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  rows="3"
+                  maxLength="500"
+                />
+                <p className="mt-1 text-sm text-gray-500">
+                  {returnData.damageReason.length}/500 characters
+                </p>
+              </div>
+
+              {returnData.damagedQuantity && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded">
+                  <p className="text-sm text-red-800">
+                    <strong>Loss Amount:</strong> ₹{(parseInt(returnData.damagedQuantity) * selectedStock.purchaseRate).toFixed(2)}
+                  </p>
+                </div>
               )}
-            </tbody>
-          </table>
+            </div>
+
+            <div className="flex justify-end space-x-3 mt-6">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowReturnModal(false);
+                  setSelectedStock(null);
+                }}
+                disabled={loading}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleReturnSubmit}
+                disabled={loading}
+              >
+                {loading ? 'Recording...' : 'Record Return'}
+              </Button>
+            </div>
+          </div>
         </div>
-      </Card>
+      )}
     </div>
   );
 };

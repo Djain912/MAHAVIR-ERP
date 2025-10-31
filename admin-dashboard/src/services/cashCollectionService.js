@@ -108,3 +108,22 @@ export const deleteCashCollection = async (id) => {
     throw error.response?.data || error;
   }
 };
+
+/**
+ * Get all cash collections (alias for admin dashboard)
+ */
+export const getCashCollections = async (filters = {}) => {
+  return getAllCashCollections(filters);
+};
+
+/**
+ * Update collection details (cheque, credit, bounce)
+ */
+export const updateCollectionDetails = async (id, details) => {
+  try {
+    const response = await api.patch(`/cash-collections/${id}/details`, details);
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
