@@ -44,6 +44,12 @@ const StockIntake = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const dropdownRef = useRef(null);
 
+  // Pagination state
+  const [stockSummaryPage, setStockSummaryPage] = useState(1);
+  const [purchaseHistoryPage, setPurchaseHistoryPage] = useState(1);
+  const [returnedStockPage, setReturnedStockPage] = useState(1);
+  const itemsPerPage = 10;
+
   // Load initial data
   useEffect(() => {
     loadProducts();
@@ -289,6 +295,66 @@ const StockIntake = () => {
     return { profit, profitPercent };
   };
 
+  // Pagination helpers
+  const getPaginatedData = (data, page) => {
+    const startIndex = (page - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return data.slice(startIndex, endIndex);
+  };
+
+  const getTotalPages = (dataLength) => {
+    return Math.ceil(dataLength / itemsPerPage);
+  };
+
+  const PaginationControls = ({ currentPage, setPage, totalItems, label }) => {
+    const totalPages = getTotalPages(totalItems);
+    
+    if (totalPages <= 1) return null;
+
+    return (
+      <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t">
+        <div className="text-sm text-gray-700">
+          Showing <span className="font-medium">{((currentPage - 1) * itemsPerPage) + 1}</span> to{' '}
+          <span className="font-medium">{Math.min(currentPage * itemsPerPage, totalItems)}</span> of{' '}
+          <span className="font-medium">{totalItems}</span> {label}
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(currentPage - 1)}
+            disabled={currentPage === 1}
+          >
+            Previous
+          </Button>
+          <div className="flex items-center gap-2">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => setPage(page)}
+                className={`px-3 py-1 rounded ${
+                  currentPage === page
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 border'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setPage(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          >
+            Next
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -519,7 +585,7 @@ const StockIntake = () => {
                   </td>
                 </tr>
               ) : (
-                stockSummary.map((item) => (
+                getPaginatedData(stockSummary, stockSummaryPage).map((item) => (
                   <tr key={item._id} className={isLowStock(item.availableQuantity) ? 'bg-yellow-50' : ''}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{item.productName}</div>
@@ -548,6 +614,12 @@ const StockIntake = () => {
             </tbody>
           </table>
         </div>
+        <PaginationControls
+          currentPage={stockSummaryPage}
+          setPage={setStockSummaryPage}
+          totalItems={stockSummary.length}
+          label="items"
+        />
       </Card>
 
       {/* Purchase History */}
@@ -593,16 +665,16 @@ const StockIntake = () => {
                   </td>
                 </tr>
               ) : (
-                stockList.map((stock) => {
+                getPaginatedData(stockList, purchaseHistoryPage).map((stock) => {
                   const profitData = calculateProfit(stock);
                   return (
                     <tr key={stock._id} className={stock.isDamaged ? 'bg-red-50' : ''}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          {stock.product?.name || 'Unknown'}
+                          {stock.product?.brandFullName || stock.product?.name || stock.productId?.brandFullName || stock.productId?.name || 'Unknown Product'}
                         </div>
                         <div className="text-sm text-gray-500">
-                          {stock.product?.size || '-'}
+                          {stock.product?.size || stock.productId?.size || '-'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -660,6 +732,12 @@ const StockIntake = () => {
             </tbody>
           </table>
         </div>
+        <PaginationControls
+          currentPage={purchaseHistoryPage}
+          setPage={setPurchaseHistoryPage}
+          totalItems={stockList.length}
+          label="records"
+        />
       </Card>
 
       {/* Purchase Returns */}
@@ -693,14 +771,14 @@ const StockIntake = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {damagedStockList.map((stock) => (
+                {getPaginatedData(damagedStockList, returnedStockPage).map((stock) => (
                   <tr key={stock._id} className="bg-red-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {stock.product?.name || 'Unknown'}
+                        {stock.product?.brandFullName || stock.product?.name || stock.productId?.brandFullName || stock.productId?.name || 'Unknown Product'}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {stock.product?.size || '-'}
+                        {stock.product?.size || stock.productId?.size || '-'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -726,6 +804,12 @@ const StockIntake = () => {
               </tbody>
             </table>
           </div>
+          <PaginationControls
+            currentPage={returnedStockPage}
+            setPage={setReturnedStockPage}
+            totalItems={damagedStockList.length}
+            label="returns"
+          />
         </Card>
       )}
 
@@ -739,7 +823,7 @@ const StockIntake = () => {
             
             <div className="mb-4 p-3 bg-gray-50 rounded">
               <p className="text-sm text-gray-600">Product</p>
-              <p className="font-semibold">{selectedStock.product?.name} - {selectedStock.product?.size}</p>
+              <p className="font-semibold">{selectedStock.product?.brandFullName || selectedStock.product?.name || selectedStock.productId?.brandFullName || selectedStock.productId?.name || 'Unknown Product'} - {selectedStock.product?.size || selectedStock.productId?.size || 'N/A'}</p>
               <p className="text-sm text-gray-600 mt-2">Available Quantity</p>
               <p className="font-semibold">{selectedStock.remainingQuantity} units</p>
             </div>

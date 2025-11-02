@@ -56,3 +56,24 @@ export const getPickListStats = async () => {
   const response = await api.get('/picklists-extracted/stats/summary');
   return response.data;
 };
+
+// RGB Tracking APIs
+export const getRGBTracking = async (filters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.pickListId) params.append('pickListId', filters.pickListId);
+  if (filters.driverId) params.append('driverId', filters.driverId);
+  if (filters.status) params.append('status', filters.status);
+  
+  const response = await api.get(`/picklists-extracted/rgb-tracking?${params.toString()}`);
+  return response.data;
+};
+
+export const getRGBTrackingById = async (id) => {
+  const response = await api.get(`/picklists-extracted/rgb-tracking/${id}`);
+  return response.data.data || response.data;
+};
+
+export const getRGBStats = async () => {
+  const response = await api.get('/picklists-extracted/rgb-tracking/stats/summary');
+  return response.data;
+};

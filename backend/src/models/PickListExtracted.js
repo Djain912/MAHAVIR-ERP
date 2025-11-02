@@ -39,6 +39,23 @@ const pickListItemSchema = new mongoose.Schema({
   totalLoadInQty: {
     type: Number,
     default: 0
+  },
+  // RGB tracking per item
+  actualSoldQty: {
+    type: Number,
+    default: 0
+  },
+  returnedFullQty: {
+    type: Number,
+    default: 0
+  },
+  returnedEmptyQty: {
+    type: Number,
+    default: 0
+  },
+  missingEmptyQty: {
+    type: Number,
+    default: 0
   }
 });
 
@@ -118,6 +135,90 @@ const pickListExtractedSchema = new mongoose.Schema({
   active: {
     type: Boolean,
     default: true
+  },
+  
+  // Stock reduction tracking
+  stockReduced: {
+    type: Boolean,
+    default: false
+  },
+  stockReducedAt: {
+    type: Date
+  },
+  stockReductionError: {
+    type: String
+  },
+  
+  // RGB (Returnable Glass Bottles) tracking
+  rgbCratesLoaded: {
+    type: Number,
+    default: 0,
+    min: [0, 'RGB crates loaded cannot be negative']
+  },
+  returnedFullCrates: {
+    type: Number,
+    default: 0,
+    min: [0, 'Returned crates cannot be negative']
+  },
+  returnedEmptyCrates: {
+    type: Number,
+    default: 0,
+    min: [0, 'Returned empty crates cannot be negative']
+  },
+  missingEmptyCrates: {
+    type: Number,
+    default: 0,
+    min: [0, 'Missing crates cannot be negative']
+  },
+  actualSold: {
+    type: Number,
+    default: 0
+  },
+  
+  // Financial reconciliation
+  expectedTotal: {
+    type: Number,
+    default: 0
+  },
+  actualTotal: {
+    type: Number,
+    default: 0
+  },
+  variance: {
+    type: Number,
+    default: 0
+  },
+  variancePercentage: {
+    type: Number,
+    default: 0
+  },
+  
+  // Status tracking
+  returnStatus: {
+    type: String,
+    enum: ['pending', 'partial', 'complete'],
+    default: 'pending'
+  },
+  isReconciled: {
+    type: Boolean,
+    default: false
+  },
+  reconciledAt: {
+    type: Date
+  },
+  reconciledBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Driver'
+  },
+  
+  // Linked records
+  dispatchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'DriverDispatch'
+  },
+  collectionId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'CashCollection'
   }
 }, {
   timestamps: true

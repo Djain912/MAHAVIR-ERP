@@ -12,6 +12,12 @@ const driverDispatchSchema = new mongoose.Schema({
     ref: 'Driver',
     required: [true, 'Driver ID is required']
   },
+  pickListId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PickListExtracted',
+    required: false, // Optional - some dispatches may not have pick lists
+    index: true
+  },
   date: {
     type: Date,
     required: [true, 'Dispatch date is required'],
@@ -46,6 +52,7 @@ const driverDispatchSchema = new mongoose.Schema({
 
 // Indexes for performance optimization
 driverDispatchSchema.index({ driverId: 1, date: -1 }); // Driver dispatch history
+driverDispatchSchema.index({ pickListId: 1 }); // Pick list lookup
 driverDispatchSchema.index({ status: 1 }); // Status filtering
 driverDispatchSchema.index({ driverId: 1, status: 1, date: -1 }); // Active dispatches per driver
 driverDispatchSchema.index({ date: -1, status: 1 }); // Date-based status filtering

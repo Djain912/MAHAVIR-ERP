@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { FaHome, FaBox, FaTruck, FaUsers, FaStore, FaCubes, FaChartBar, FaBars, FaTimes, FaSignOutAlt, FaMoneyBillWave, FaWarehouse, FaFilePdf, FaMoneyCheck, FaCalendarCheck, FaFileInvoiceDollar, FaReceipt, FaCashRegister, FaClipboardList } from 'react-icons/fa';
+import { FaHome, FaBox, FaTruck, FaUsers, FaStore, FaCubes, FaChartBar, FaBars, FaTimes, FaSignOutAlt, FaMoneyBillWave, FaWarehouse, FaFilePdf, FaMoneyCheck, FaCalendarCheck, FaFileInvoiceDollar, FaReceipt, FaCashRegister, FaClipboardList, FaRecycle } from 'react-icons/fa';
 import { logout, getStoredUser } from '../services/authService';
 import { toast } from 'react-toastify';
 
@@ -32,6 +32,7 @@ const Layout = () => {
     { path: '/expenses', label: 'Expense Tracking', icon: FaReceipt },
     { path: '/counter-sales', label: 'Counter Sales', icon: FaCashRegister },
     { path: '/picklist-extraction', label: 'PickList Extraction', icon: FaFilePdf },
+    { path: '/rgb-reconciliation', label: 'RGB Reconciliation', icon: FaRecycle },
     { path: '/reports', label: 'Reports', icon: FaChartBar },
   ];
 

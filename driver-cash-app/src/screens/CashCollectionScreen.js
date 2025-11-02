@@ -46,6 +46,10 @@ export default function CashCollectionScreen({ route, navigation }) {
   const [emptyBottlesReceived, setEmptyBottlesReceived] = useState('');
   const [coins, setCoins] = useState(''); // Single field for all coins (₹1, ₹2, ₹5)
   
+  // RGB (Returnable Glass Bottles) tracking
+  const [returnedFullCrates, setReturnedFullCrates] = useState('');
+  const [returnedEmptyCrates, setReturnedEmptyCrates] = useState('');
+  
   // NEW FIELDS - Invoice, Outlet, Salesman, Expense
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [outletName, setOutletName] = useState('');
@@ -181,6 +185,9 @@ export default function CashCollectionScreen({ route, navigation }) {
         // NEW FIELDS - Daily Expense
         dailyExpenseAmount: parseFloat(dailyExpenseAmount || 0),
         expenseNotes: expenseNotes.trim(),
+        // RGB (Returnable Glass Bottles) fields
+        returnedFullCrates: parseInt(returnedFullCrates || 0),
+        returnedEmptyCrates: parseInt(returnedEmptyCrates || 0),
         expectedCash: parseFloat(expectedCash),
         notes: notes.trim(),
       };
@@ -495,6 +502,93 @@ export default function CashCollectionScreen({ route, navigation }) {
             <Text style={[styles.infoValue, { color: '#16A34A', fontSize: 18, fontWeight: 'bold' }]}>
               {parseFloat(emptyBottlesReceived || 0)} bottles
             </Text>
+          </View>
+        )}
+      </View>
+
+      {/* RGB (Returnable Glass Bottles) Tracking Section */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>📦 RGB Returns (Returnable Glass Bottles)</Text>
+        <Text style={styles.subtitle}>Track full and empty crate returns</Text>
+        
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Full Crates Returned (Unsold)</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g., 2"
+            keyboardType="numeric"
+            value={returnedFullCrates}
+            onChangeText={setReturnedFullCrates}
+          />
+          <Text style={styles.helpText}>Crates with full bottles that were not sold</Text>
+        </View>
+
+        <View style={styles.inputGroup}>
+          <Text style={styles.inputLabel}>Empty Crates Returned</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g., 45"
+            keyboardType="numeric"
+            value={returnedEmptyCrates}
+            onChangeText={setReturnedEmptyCrates}
+          />
+          <Text style={styles.helpText}>Empty crates returned after sales</Text>
+        </View>
+
+        {/* RGB Calculation Display */}
+        {dispatch?.totalStockValue && (returnedFullCrates || returnedEmptyCrates) && (
+          <View style={styles.rgbCalculation}>
+            <Text style={styles.rgbTitle}>📊 RGB Calculation</Text>
+            
+            <View style={styles.rgbRow}>
+              <Text style={styles.rgbLabel}>Total Loaded:</Text>
+              <Text style={styles.rgbValue}>52 crates</Text>
+            </View>
+            
+            {returnedFullCrates && (
+              <>
+                <View style={styles.rgbRow}>
+                  <Text style={styles.rgbLabel}>Returned Full:</Text>
+                  <Text style={styles.rgbValue}>{returnedFullCrates} crates</Text>
+                </View>
+                <View style={styles.rgbRow}>
+                  <Text style={styles.rgbLabel}>Actual Sold:</Text>
+                  <Text style={[styles.rgbValue, { color: '#16A34A', fontWeight: 'bold' }]}>
+                    {52 - parseInt(returnedFullCrates || 0)} crates
+                  </Text>
+                </View>
+              </>
+            )}
+            
+            {returnedEmptyCrates && (
+              <>
+                <View style={[styles.rgbRow, { marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E5E7EB' }]}>
+                  <Text style={styles.rgbLabel}>Expected Empties:</Text>
+                  <Text style={styles.rgbValue}>{52 - parseInt(returnedFullCrates || 0)} crates</Text>
+                </View>
+                <View style={styles.rgbRow}>
+                  <Text style={styles.rgbLabel}>Returned Empties:</Text>
+                  <Text style={styles.rgbValue}>{returnedEmptyCrates} crates</Text>
+                </View>
+                <View style={styles.rgbRow}>
+                  <Text style={styles.rgbLabel}>Missing Empties:</Text>
+                  <Text style={[styles.rgbValue, { 
+                    color: (52 - parseInt(returnedFullCrates || 0) - parseInt(returnedEmptyCrates || 0)) > 0 ? '#DC2626' : '#16A34A',
+                    fontWeight: 'bold'
+                  }]}>
+                    {Math.max(0, 52 - parseInt(returnedFullCrates || 0) - parseInt(returnedEmptyCrates || 0))} crates
+                  </Text>
+                </View>
+                {(52 - parseInt(returnedFullCrates || 0) - parseInt(returnedEmptyCrates || 0)) > 0 && (
+                  <View style={styles.warningBox}>
+                    <Text style={styles.warningText}>
+                      ⚠️ Missing empties penalty: ₹{(52 - parseInt(returnedFullCrates || 0) - parseInt(returnedEmptyCrates || 0)) * 50}
+                      {'\n'}(₹50 per missing crate)
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
           </View>
         )}
       </View>
@@ -831,5 +925,53 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#92400E',
+  },
+  // RGB Tracking Styles
+  rgbCalculation: {
+    backgroundColor: '#F0F9FF',
+    padding: 16,
+    borderRadius: 8,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+  },
+  rgbTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1E40AF',
+    marginBottom: 12,
+  },
+  rgbRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  rgbLabel: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  rgbValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  warningBox: {
+    backgroundColor: '#FEF2F2',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#DC2626',
+  },
+  warningText: {
+    fontSize: 13,
+    color: '#991B1B',
+    fontWeight: '500',
+  },
+  helpText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
 });

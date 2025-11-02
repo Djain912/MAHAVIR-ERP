@@ -17,6 +17,11 @@ const cashCollectionSchema = new mongoose.Schema({
     ref: 'DriverDispatch',
     required: [true, 'Dispatch ID is required']
   },
+  pickListId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PickListExtracted',
+    index: true
+  },
   collectionDate: {
     type: Date,
     required: [true, 'Collection date is required'],
@@ -132,6 +137,17 @@ const cashCollectionSchema = new mongoose.Schema({
   bottlesNotes: {
     type: String,
     maxlength: [500, 'Bottles notes cannot exceed 500 characters']
+  },
+  // RGB (Returnable Glass Bottles) fields
+  returnedFullCrates: {
+    type: Number,
+    default: 0,
+    min: [0, 'Returned full crates cannot be negative']
+  },
+  returnedEmptyCrates: {
+    type: Number,
+    default: 0,
+    min: [0, 'Returned empty crates cannot be negative']
   },
   // NEW FIELDS - Invoice and Outlet Details
   invoiceNumber: {

@@ -19,6 +19,13 @@ const attendanceSchema = new mongoose.Schema({
     required: true
   },
   
+  // Shift information (for employees who work 2 shifts)
+  shift: {
+    type: String,
+    enum: ['Single', 'Shift-1', 'Shift-2'],
+    default: 'Single'
+  },
+  
   // Status: Present, Absent, Half-Day, Leave
   status: {
     type: String,
@@ -41,6 +48,17 @@ const attendanceSchema = new mongoose.Schema({
   workingHours: {
     type: Number,
     default: 0
+  },
+  
+  // Shift timings for reference
+  shiftStartTime: {
+    type: String, // Format: "HH:MM" (e.g., "06:00")
+    default: null
+  },
+  
+  shiftEndTime: {
+    type: String, // Format: "HH:MM" (e.g., "14:00")
+    default: null
   },
   
   // Leave type if status is Leave
@@ -73,14 +91,18 @@ const attendanceSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Compound index to prevent duplicate entries for same employee on same date
-attendanceSchema.index({ employeeId: 1, date: 1 }, { unique: true });
+// Compound index to prevent duplicate entries for same employee on same date and shift
+// Changed: Now allows multiple entries per day (for 2 shifts)
+attendanceSchema.index({ employeeId: 1, date: 1, shift: 1 }, { unique: true });
 
 // Index for date range queries
 attendanceSchema.index({ date: 1 });
 
-// Static method to mark attendance
-attendanceSchema.statics.markAttendance = async function(employeeId, date, status, markedBy, remarks = '') {
+// Index for shift-based queries
+attendanceSchema.index({ shift: 1 });
+
+// Static method to mark attendance (Updated for multi-shift support)
+attendanceSchema.statics.markAttendance = async function(employeeId, date, status, markedBy, remarks = '', shift = 'Single', shiftStartTime = null, shiftEndTime = null) {
   const startOfDay = new Date(date);
   startOfDay.setHours(0, 0, 0, 0);
   
@@ -88,12 +110,15 @@ attendanceSchema.statics.markAttendance = async function(employeeId, date, statu
   endOfDay.setHours(23, 59, 59, 999);
   
   const attendance = await this.findOneAndUpdate(
-    { employeeId, date: { $gte: startOfDay, $lte: endOfDay } },
+    { employeeId, date: { $gte: startOfDay, $lte: endOfDay }, shift },
     {
       status,
       markedBy,
       remarks,
-      date: startOfDay
+      date: startOfDay,
+      shift,
+      shiftStartTime,
+      shiftEndTime
     },
     { upsert: true, new: true }
   ).populate('employeeId', 'name phone role');

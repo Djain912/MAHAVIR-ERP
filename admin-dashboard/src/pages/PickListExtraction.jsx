@@ -94,7 +94,26 @@ export default function PickListExtraction() {
       setUploading(true);
       const response = await pickListService.uploadAndExtractPickList(selectedFile);
       
-      alert(`✅ Pick list extracted successfully!\nPick List: ${response.data.pickListNumber}\nItems: ${response.data.totalItems}`);
+      // Backend returns { pickList, stockReduction } or { pickList, stockReductionError }
+      const pickList = response.data.pickList || response.data;
+      const pickListNumber = pickList.pickListNumber || 'N/A';
+      const totalItems = pickList.items?.length || pickList.totalItems || 0;
+      const stockReduction = response.data.stockReduction;
+      
+      let message = `✅ Pick list extracted successfully!\nPick List: ${pickListNumber}\nItems: ${totalItems} products`;
+      
+      if (stockReduction) {
+        if (stockReduction.success) {
+          message += `\n✅ Stock reduced: ${stockReduction.itemsProcessed} items processed`;
+        } else {
+          message += `\n⚠️ Stock reduction: ${stockReduction.itemsProcessed} succeeded, ${stockReduction.itemsFailed} failed`;
+          message += `\n${stockReduction.message}`;
+        }
+      } else if (response.data.stockReductionError) {
+        message += `\n❌ Stock reduction failed: ${response.data.stockReductionError}`;
+      }
+      
+      alert(message);
       
       setSelectedFile(null);
       document.getElementById('pdfUpload').value = '';

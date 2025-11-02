@@ -88,4 +88,88 @@ router.put('/:id', pickListExtractedController.updatePickList);
  */
 router.delete('/:id', pickListExtractedController.deletePickList);
 
+/**
+ * @route   POST /api/picklists-extracted/:id/reduce-stock
+ * @desc    Manually reduce stock for pick list
+ * @access  Private
+ */
+router.post('/:id/reduce-stock', pickListExtractedController.manualReduceStock);
+
+/**
+ * @route   POST /api/picklists-extracted/:id/reverse-stock
+ * @desc    Reverse stock reduction
+ * @access  Private
+ */
+router.post('/:id/reverse-stock', pickListExtractedController.reverseStock);
+
+/**
+ * @route   POST /api/picklists-extracted/:id/rgb-returns
+ * @desc    Process RGB (Returnable Glass Bottles) returns
+ * @access  Private
+ */
+router.post('/:id/rgb-returns', pickListExtractedController.processRGBReturnsHandler);
+
+/**
+ * @route   GET /api/picklists-extracted/rgb-tracking
+ * @desc    Get RGB tracking records
+ * @access  Private
+ */
+router.get('/rgb-tracking', pickListExtractedController.getRGBTracking);
+
+/**
+ * @route   GET /api/picklists-extracted/rgb-tracking/stats/summary
+ * @desc    Get RGB statistics
+ * @access  Private
+ */
+router.get('/rgb-tracking/stats/summary', pickListExtractedController.getRGBStats);
+
+/**
+ * @route   GET /api/picklists-extracted/rgb-tracking/:id
+ * @desc    Get RGB tracking by ID
+ * @access  Private
+ */
+router.get('/rgb-tracking/:id', pickListExtractedController.getRGBTrackingByIdHandler);
+
+/**
+ * @route   POST /api/picklists-extracted/rgb-tracking/:id/verify
+ * @desc    Verify RGB returns
+ * @access  Private
+ */
+router.post('/rgb-tracking/:id/verify', pickListExtractedController.verifyRGBReturnsHandler);
+
+/**
+ * @route   POST /api/picklists-extracted/rgb-tracking/:id/settle
+ * @desc    Settle RGB returns
+ * @access  Private
+ */
+router.post('/rgb-tracking/:id/settle', pickListExtractedController.settleRGBReturnsHandler);
+
+/**
+ * @route   POST /api/picklists-extracted/:id/reconcile
+ * @desc    Reconcile pick list with cash collection
+ * @access  Private
+ */
+router.post('/:id/reconcile', pickListExtractedController.reconcilePickListHandler);
+
+/**
+ * @route   GET /api/picklists-extracted/reconciliation/reports
+ * @desc    Get reconciliation reports
+ * @access  Private
+ */
+router.get('/reconciliation/reports', pickListExtractedController.getReconciliationReportsHandler);
+
+/**
+ * @route   GET /api/picklists-extracted/reconciliation/stats
+ * @desc    Get reconciliation statistics
+ * @access  Private
+ */
+router.get('/reconciliation/stats', pickListExtractedController.getReconciliationStatsHandler);
+
+/**
+ * @route   GET /api/picklists-extracted/:id/variance-breakdown
+ * @desc    Get variance breakdown for pick list
+ * @access  Private
+ */
+router.get('/:id/variance-breakdown', pickListExtractedController.getVarianceBreakdownHandler);
+
 export default router;

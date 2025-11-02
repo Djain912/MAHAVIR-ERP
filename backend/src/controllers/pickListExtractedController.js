@@ -8,6 +8,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import PickListExtracted from '../models/PickListExtracted.js';
 import { successResponse, errorResponse } from '../utils/response.js';
+import { reduceStockForPickList, reverseStockReduction } from '../services/stockService.js';
+import { processRGBReturns, getRGBTrackingRecords, getRGBTrackingById, verifyRGBReturns, settleRGBReturns, getRGBStatistics } from '../services/rgbTrackingService.js';
+import { reconcilePickList, getReconciliationReports, getReconciliationStatistics, getVarianceBreakdown } from '../services/reconciliationService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -69,7 +72,25 @@ export const extractAndSavePickList = async (req, res, next) => {
         const pickList = new PickListExtracted(extractedData);
         await pickList.save();
 
-        return successResponse(res, 201, 'Pick list extracted and saved successfully', pickList);
+        // AUTO-REDUCE STOCK ✅
+        try {
+          const stockResult = await reduceStockForPickList(pickList._id);
+          console.log('✅ Stock reduced for pick list:', pickList.pickListNumber, stockResult.message);
+          
+          return successResponse(res, 201, 'Pick list extracted and stock reduced', {
+            pickList,
+            stockReduction: stockResult
+          });
+        } catch (stockError) {
+          console.error('❌ Stock reduction failed:', stockError.message);
+          pickList.stockReductionError = stockError.message;
+          await pickList.save();
+          
+          return successResponse(res, 201, 'Pick list extracted but stock reduction failed', {
+            pickList,
+            stockReductionError: stockError.message
+          });
+        }
       } catch (error) {
         console.error('❌ Error saving pick list:', error);
         return errorResponse(res, 500, 'Failed to save extracted data', { error: error.message });
@@ -267,6 +288,212 @@ export const getPickListStats = async (req, res, next) => {
     ]);
 
     return successResponse(res, 200, 'Statistics retrieved successfully', stats[0] || {});
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Manually reduce stock for pick list
+ * POST /api/picklists-extracted/:id/reduce-stock
+ */
+export const manualReduceStock = async (req, res, next) => {
+  try {
+    const result = await reduceStockForPickList(req.params.id);
+    return successResponse(res, 200, result.message, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Reverse stock reduction
+ * POST /api/picklists-extracted/:id/reverse-stock
+ */
+export const reverseStock = async (req, res, next) => {
+  try {
+    const result = await reverseStockReduction(req.params.id);
+    return successResponse(res, 200, result.message, result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Process RGB returns
+ * POST /api/picklists-extracted/:id/rgb-returns
+ */
+export const processRGBReturnsHandler = async (req, res, next) => {
+  try {
+    const { driverId, returnedFullCrates, returnedEmptyCrates } = req.body;
+    
+    if (!driverId) {
+      return errorResponse(res, 400, 'Driver ID is required');
+    }
+    
+    const rgbData = {
+      pickListId: req.params.id,
+      driverId,
+      returnedFullCrates: parseInt(returnedFullCrates) || 0,
+      returnedEmptyCrates: parseInt(returnedEmptyCrates) || 0
+    };
+    
+    const result = await processRGBReturns(rgbData);
+    return successResponse(res, 200, 'RGB returns processed successfully', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get RGB tracking records
+ * GET /api/picklists-extracted/rgb-tracking
+ */
+export const getRGBTracking = async (req, res, next) => {
+  try {
+    const filters = {
+      driverId: req.query.driverId,
+      status: req.query.status,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate
+    };
+    
+    const records = await getRGBTrackingRecords(filters);
+    return successResponse(res, 200, 'RGB tracking records retrieved', records);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get RGB tracking by ID
+ * GET /api/picklists-extracted/rgb-tracking/:id
+ */
+export const getRGBTrackingByIdHandler = async (req, res, next) => {
+  try {
+    const record = await getRGBTrackingById(req.params.id);
+    return successResponse(res, 200, 'RGB tracking record retrieved', record);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Verify RGB returns
+ * POST /api/picklists-extracted/rgb-tracking/:id/verify
+ */
+export const verifyRGBReturnsHandler = async (req, res, next) => {
+  try {
+    const { verifiedById } = req.body;
+    
+    if (!verifiedById) {
+      return errorResponse(res, 400, 'Verified by ID is required');
+    }
+    
+    const result = await verifyRGBReturns(req.params.id, verifiedById);
+    return successResponse(res, 200, 'RGB returns verified successfully', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Settle RGB returns
+ * POST /api/picklists-extracted/rgb-tracking/:id/settle
+ */
+export const settleRGBReturnsHandler = async (req, res, next) => {
+  try {
+    const result = await settleRGBReturns(req.params.id);
+    return successResponse(res, 200, 'RGB returns settled successfully', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get RGB statistics
+ * GET /api/picklists-extracted/rgb-tracking/stats/summary
+ */
+export const getRGBStats = async (req, res, next) => {
+  try {
+    const filters = {
+      driverId: req.query.driverId,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate
+    };
+    
+    const stats = await getRGBStatistics(filters);
+    return successResponse(res, 200, 'RGB statistics retrieved', stats);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Reconcile pick list with collection
+ * POST /api/picklists-extracted/:id/reconcile
+ */
+export const reconcilePickListHandler = async (req, res, next) => {
+  try {
+    const { collectionId } = req.body;
+    
+    if (!collectionId) {
+      return errorResponse(res, 400, 'Collection ID is required');
+    }
+    
+    const result = await reconcilePickList(req.params.id, collectionId);
+    return successResponse(res, 200, 'Reconciliation completed successfully', result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get reconciliation reports
+ * GET /api/picklists-extracted/reconciliation/reports
+ */
+export const getReconciliationReportsHandler = async (req, res, next) => {
+  try {
+    const filters = {
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+      vehicleNumber: req.query.vehicleNumber,
+      varianceStatus: req.query.varianceStatus
+    };
+    
+    const reports = await getReconciliationReports(filters);
+    return successResponse(res, 200, 'Reconciliation reports retrieved', reports);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get reconciliation statistics
+ * GET /api/picklists-extracted/reconciliation/stats
+ */
+export const getReconciliationStatsHandler = async (req, res, next) => {
+  try {
+    const filters = {
+      startDate: req.query.startDate,
+      endDate: req.query.endDate
+    };
+    
+    const stats = await getReconciliationStatistics(filters);
+    return successResponse(res, 200, 'Reconciliation statistics retrieved', stats);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get variance breakdown
+ * GET /api/picklists-extracted/:id/variance-breakdown
+ */
+export const getVarianceBreakdownHandler = async (req, res, next) => {
+  try {
+    const breakdown = await getVarianceBreakdown(req.params.id);
+    return successResponse(res, 200, 'Variance breakdown retrieved', breakdown);
   } catch (error) {
     next(error);
   }

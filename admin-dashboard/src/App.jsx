@@ -23,6 +23,7 @@ import ProductManagement from './pages/ProductManagement';
 import WholesalerManagement from './pages/WholesalerManagement';
 import CashReconciliation from './pages/CashReconciliation';
 import PickListExtraction from './pages/PickListExtraction';
+import RGBReconciliation from './pages/RGBReconciliation';
 import ChequeManagement from './pages/ChequeManagement';
 import AttendanceMarking from './pages/AttendanceMarking';
 import SalaryManagement from './pages/SalaryManagement';
@@ -65,6 +66,7 @@ function App() {
           <Route path="products" element={<ProductManagement />} />
           <Route path="cash-reconciliation" element={<CashReconciliation />} />
           <Route path="picklist-extraction" element={<PickListExtraction />} />
+          <Route path="rgb-reconciliation" element={<RGBReconciliation />} />
           <Route path="cheques" element={<ChequeManagement />} />
           <Route path="attendance" element={<AttendanceMarking />} />
           <Route path="salary" element={<SalaryManagement />} />

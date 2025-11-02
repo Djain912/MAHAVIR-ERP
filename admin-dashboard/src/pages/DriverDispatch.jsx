@@ -419,9 +419,14 @@ const DriverDispatch = () => {
                       {new Date(dispatch.date).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {dispatch.driverId?.name || 'Unknown Driver'}
-                      <br />
-                      <span className="text-xs text-gray-500">{dispatch.driverId?.phone}</span>
+                      <div className="font-medium">
+                        {dispatch.driverId?.name || dispatch.driver?.name || 'Unknown Driver'}
+                      </div>
+                      {(dispatch.driverId?.phone || dispatch.driver?.phone) && (
+                        <div className="text-xs text-gray-500">
+                          {dispatch.driverId?.phone || dispatch.driver?.phone}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       ₹{dispatch.totalStockValue?.toFixed(2) || '0.00'}
@@ -724,8 +729,8 @@ const DriverDispatch = () => {
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div>
                   <p className="text-sm text-gray-600">Driver:</p>
-                  <p className="text-lg font-semibold">{selectedDispatch.driverId?.name}</p>
-                  <p className="text-sm text-gray-500">{selectedDispatch.driverId?.phone}</p>
+                  <p className="text-lg font-semibold">{selectedDispatch.driverId?.name || selectedDispatch.driver?.name || 'Unknown Driver'}</p>
+                  <p className="text-sm text-gray-500">{selectedDispatch.driverId?.phone || selectedDispatch.driver?.phone || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Date:</p>

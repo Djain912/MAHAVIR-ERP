@@ -12,7 +12,7 @@ import Driver from '../models/Driver.js';
  */
 export const markAttendance = async (req, res) => {
   try {
-    const { employeeId, date, status, remarks } = req.body;
+    const { employeeId, date, status, remarks, shift = 'Single', shiftStartTime, shiftEndTime } = req.body;
     const markedBy = req.user.id;
     
     // Validate employee exists
@@ -26,7 +26,10 @@ export const markAttendance = async (req, res) => {
       date,
       status,
       markedBy,
-      remarks
+      remarks,
+      shift,
+      shiftStartTime,
+      shiftEndTime
     );
     
     res.json(attendance);
@@ -43,7 +46,7 @@ export const markAttendance = async (req, res) => {
 export const bulkMarkAttendance = async (req, res) => {
   try {
     const { date, attendanceRecords } = req.body;
-    // attendanceRecords = [{ employeeId, status, remarks }, ...]
+    // attendanceRecords = [{ employeeId, status, remarks, shift, shiftStartTime, shiftEndTime }, ...]
     
     const markedBy = req.user.id;
     const results = [];
@@ -55,7 +58,10 @@ export const bulkMarkAttendance = async (req, res) => {
           date,
           record.status,
           markedBy,
-          record.remarks || ''
+          record.remarks || '',
+          record.shift || 'Single',
+          record.shiftStartTime || null,
+          record.shiftEndTime || null
         );
         results.push({ success: true, attendance });
       } catch (error) {
@@ -92,30 +98,59 @@ export const getDailyAttendance = async (req, res) => {
       date: { $gte: startOfDay, $lte: endOfDay }
     }).populate('employeeId', 'name phone role salary')
       .populate('markedBy', 'name')
-      .sort({ 'employeeId.name': 1 });
+      .sort({ 'employeeId.name': 1, shift: 1 });
     
     // Get all active employees
     const allEmployees = await Driver.find({ active: true }).select('name phone role salary');
     
+    // Group attendance by employee and shift
+    const attendanceByEmployee = {};
+    attendance.forEach(a => {
+      const empId = a.employeeId._id.toString();
+      if (!attendanceByEmployee[empId]) {
+        attendanceByEmployee[empId] = {
+          employee: a.employeeId,
+          shifts: []
+        };
+      }
+      attendanceByEmployee[empId].shifts.push({
+        shift: a.shift,
+        status: a.status,
+        checkInTime: a.checkInTime,
+        checkOutTime: a.checkOutTime,
+        workingHours: a.workingHours,
+        shiftStartTime: a.shiftStartTime,
+        shiftEndTime: a.shiftEndTime,
+        remarks: a.remarks,
+        _id: a._id
+      });
+    });
+    
     // Find employees without attendance marked
     const markedEmployeeIds = attendance.map(a => a.employeeId._id.toString());
+    const uniqueMarkedEmployeeIds = [...new Set(markedEmployeeIds)];
     const unmarkedEmployees = allEmployees.filter(
-      emp => !markedEmployeeIds.includes(emp._id.toString())
+      emp => !uniqueMarkedEmployeeIds.includes(emp._id.toString())
     );
     
     res.json({
       date: startOfDay,
       marked: attendance,
+      attendanceByEmployee: Object.values(attendanceByEmployee),
       unmarked: unmarkedEmployees,
       summary: {
         total: allEmployees.length,
-        marked: attendance.length,
+        markedEmployees: uniqueMarkedEmployeeIds.length,
+        totalShifts: attendance.length,
         unmarked: unmarkedEmployees.length,
         present: attendance.filter(a => a.status === 'Present').length,
         absent: attendance.filter(a => a.status === 'Absent').length,
         halfDay: attendance.filter(a => a.status === 'Half-Day').length,
         leave: attendance.filter(a => a.status === 'Leave').length,
-        holiday: attendance.filter(a => a.status === 'Holiday').length
+        holiday: attendance.filter(a => a.status === 'Holiday').length,
+        shift1: attendance.filter(a => a.shift === 'Shift-1').length,
+        shift2: attendance.filter(a => a.shift === 'Shift-2').length,
+        singleShift: attendance.filter(a => a.shift === 'Single').length
       }
     });
   } catch (error) {
@@ -187,11 +222,16 @@ export const getMonthlyReport = async (req, res) => {
 export const updateAttendance = async (req, res) => {
   try {
     const { id } = req.params;
-    const { status, remarks } = req.body;
+    const { status, remarks, shift, shiftStartTime, shiftEndTime } = req.body;
+    
+    const updateData = { status, remarks };
+    if (shift) updateData.shift = shift;
+    if (shiftStartTime) updateData.shiftStartTime = shiftStartTime;
+    if (shiftEndTime) updateData.shiftEndTime = shiftEndTime;
     
     const attendance = await Attendance.findByIdAndUpdate(
       id,
-      { status, remarks },
+      updateData,
       { new: true }
     ).populate('employeeId', 'name phone role');
     
